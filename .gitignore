@@ -30,6 +30,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 .pip-cache/
+.DS_Store
 
 
 # Jupyter Notebook
@@ -105,4 +106,10 @@ cython_debug/
 
 example/debug_configs/
 
+data/
+runs/
 
+docs/
+
+# Logs
+logs/
