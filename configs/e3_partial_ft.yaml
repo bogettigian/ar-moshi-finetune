@@ -1,0 +1,43 @@
+data:
+  eval_data: data/jsonl/val.jsonl
+  shuffle: true
+  train_data: data/jsonl/train.jsonl
+
+moshi_paths:
+  hf_repo_id: "kyutai/moshiko-pytorch-bf16"
+
+full_finetuning: false
+lora:
+  enable: false
+  rank: 0
+  scaling: 0.
+  ft_embed: false
+
+# partial_ft:
+#   temporal_last_n: 4
+#   unfreeze_depth: true
+#   unfreeze_embeddings: true
+#   unfreeze_text_linear: true
+
+first_codebook_weight_multiplier: 100.
+text_padding_weight: .5
+
+duration_sec: 100
+batch_size: 16
+max_steps: 1500
+gradient_checkpointing: true
+optim:
+  lr: 2e-6
+  weight_decay: 0.1
+  pct_start: 0.05
+
+seed: 0
+log_freq: 1
+eval_freq: 100
+do_eval: true
+do_ckpt: true
+ckpt_freq: 100
+
+save_adapters: false
+
+run_dir: runs/e3_partial_ft_v1
