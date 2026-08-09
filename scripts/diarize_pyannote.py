@@ -32,10 +32,15 @@ from pyannote.audio import Pipeline
 logger = logging.getLogger(__name__)
 
 
-def load_pipeline(model: str, device: str, hf_token: str | None) -> Pipeline:
-    logger.info("loading pipeline %s on %s", model, device)
+def load_pipeline(
+    model: str, device: str, hf_token: str | None, batch_size: int = 32
+) -> Pipeline:
+    logger.info("loading pipeline %s on %s (batch size %d)", model, device, batch_size)
     pipeline = Pipeline.from_pretrained(model, use_auth_token=hf_token)
     pipeline.to(torch.device(device))
+
+    pipeline.segmentation_batch_size = batch_size
+    pipeline.embedding_batch_size = batch_size
     return pipeline
 
 
@@ -69,6 +74,13 @@ def main() -> None:
     parser.add_argument("--in-dir", type=Path, default=Path("./data/raw_mp3"))
     parser.add_argument("--model", default="pyannote/speaker-diarization-3.1")
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Windows per forward pass. pyannote defaults to 1, which leaves a "
+        "GPU idle; lower this when running on cpu (default: %(default)s).",
+    )
+    parser.add_argument(
         "--device",
         default=None,
         help="Torch device. Default: cuda, else mps, else cpu.",
@@ -89,7 +101,9 @@ def main() -> None:
 
     silence_audio_backend_warnings()
     sweep_temp_files(args.in_dir)
-    pipeline = load_pipeline(args.model, resolve_device(args.device), hf_token)
+    pipeline = load_pipeline(
+        args.model, resolve_device(args.device), hf_token, args.batch_size
+    )
 
     audio_paths = iter_audio_files(args.in_dir)
     logger.info("found %d audio files under %s", len(audio_paths), args.in_dir)

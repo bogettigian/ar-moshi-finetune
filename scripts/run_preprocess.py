@@ -198,6 +198,13 @@ def main() -> int:
     parser.add_argument("--sample-rate", type=int, default=24000)
     parser.add_argument("--min-share", type=float, default=0.1)
     parser.add_argument("--model", default="pyannote/speaker-diarization-3.1")
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="Windows per forward pass. pyannote defaults to 1, which leaves a "
+        "GPU idle; lower this when running on cpu (default: %(default)s).",
+    )
     parser.add_argument("--device", default=None)
     parser.add_argument(
         "--s3-bucket",
@@ -252,7 +259,9 @@ def main() -> int:
     hf_token = os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HF_TOKEN")
     if not hf_token:
         logger.warning("no HUGGINGFACE_TOKEN / HF_TOKEN in env — pyannote may fail")
-    pipeline = load_pipeline(args.model, resolve_device(args.device), hf_token)
+    pipeline = load_pipeline(
+        args.model, resolve_device(args.device), hf_token, args.batch_size
+    )
     counters = Counters()
 
     for feed_url in feeds:
