@@ -23,6 +23,7 @@ dependencies = [
   "pyannote.audio",
   "feedparser",
   "requests",
+  "boto3",
   "huggingface_hub",
   "torchaudio==2.6",
   "submitit",
