@@ -6,6 +6,7 @@ import hashlib
 import logging
 import logging.config
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -13,7 +14,7 @@ from urllib.parse import urlparse
 import feedparser
 import requests
 
-from common import AUDIO_EXTS
+from common import AUDIO_EXTS, atomic_path, sweep_temp_files
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +116,29 @@ def _parse_duration(raw: str | None) -> float | None:
     return float(h * 3600 + m * 60 + s)
 
 
-def download(entry: FeedEntry, out_dir: Path, timeout: float = 60.0) -> Path:
+class TruncatedDownload(RuntimeError):
+    pass
+
+
+def _fetch(url: str, dest: Path, timeout: float) -> None:
+    with requests.get(url, stream=True, timeout=timeout) as resp:
+        resp.raise_for_status()
+        expected = resp.headers.get("Content-Length")
+        written = 0
+        with dest.open("wb") as fh:
+            for chunk in resp.iter_content(chunk_size=1 << 16):
+                if chunk:
+                    written += fh.write(chunk)
+    if expected is None:
+        logger.warning("no Content-Length for %s, cannot verify size", url)
+        return
+    if written != int(expected):
+        raise TruncatedDownload(f"got {written} bytes, expected {expected}")
+
+
+def download(
+    entry: FeedEntry, out_dir: Path, timeout: float = 60.0, attempts: int = 3
+) -> Path:
     podcast_dir = out_dir / entry.podcast
     podcast_dir.mkdir(parents=True, exist_ok=True)
     local_path = podcast_dir / f"{entry.episode_id}{entry.ext}"
@@ -128,14 +151,24 @@ def download(entry: FeedEntry, out_dir: Path, timeout: float = 60.0) -> Path:
             logger.debug("skip (exists): %s", existing)
             return existing
     logger.info("downloading %s in %s", entry.url, local_path)
-    with requests.get(entry.url, stream=True, timeout=timeout) as resp:
-        resp.raise_for_status()
-        tmp_path = local_path.with_suffix(local_path.suffix + ".part")
-        with tmp_path.open("wb") as fh:
-            for chunk in resp.iter_content(chunk_size=1 << 16):
-                if chunk:
-                    fh.write(chunk)
-        tmp_path.rename(local_path)
+    for attempt in range(1, attempts + 1):
+        try:
+            with atomic_path(local_path) as tmp:
+                _fetch(entry.url, tmp, timeout)
+            return local_path
+        except (requests.RequestException, TruncatedDownload) as exc:
+            if attempt == attempts:
+                raise
+            backoff = 2 ** (attempt - 1)
+            logger.warning(
+                "attempt %d/%d failed for %s (%s), retrying in %ds",
+                attempt,
+                attempts,
+                entry.url,
+                exc,
+                backoff,
+            )
+            time.sleep(backoff)
     return local_path
 
 
@@ -201,6 +234,7 @@ def main() -> None:
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    sweep_temp_files(args.out_dir)
     feeds = read_feeds_file(args.feeds_file)
     logger.info("loaded %d feeds from %s", len(feeds), args.feeds_file)
 

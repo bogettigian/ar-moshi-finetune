@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import json
 import logging
@@ -8,6 +9,8 @@ import logging.config
 from pathlib import Path
 
 import sphn
+
+from common import atomic_write
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,13 @@ def main() -> None:
     parser.add_argument("--out-dir", type=Path, default=Path("./data/jsonl"))
     parser.add_argument("--val-fraction", type=float, default=0.1)
     parser.add_argument(
+        "--path-prefix",
+        type=Path,
+        default=Path("data/stereo"),
+        help="Where the wavs will live on the training machine. Only used when "
+        "building from the index, since the files may not be local here.",
+    )
+    parser.add_argument(
         "--relative-to",
         type=Path,
         default=None,
@@ -36,21 +46,31 @@ def main() -> None:
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
-    wavs = sorted(args.stereo_dir.glob("*.wav"))
-    logger.info("found %d wavs under %s", len(wavs), args.stereo_dir)
-    if not wavs:
-        logger.info("no wavs found, nothing to do")
-        return
+    # The pipeline deletes each wav once it is in S3, so the index is the only
+    # local record of what the corpus contains. Fall back to scanning the
+    # directory when running without S3 (smoke tests, local experiments).
+    index_path = args.stereo_dir / "index.csv"
+    if index_path.exists():
+        with index_path.open(newline="") as fh:
+            rows = sorted(csv.DictReader(fh), key=lambda r: r["wav_name"])
+        logger.info("found %d entries in %s", len(rows), index_path)
+        wavs = [args.path_prefix / r["wav_name"] for r in rows]
+        durations = [float(r["duration_sec"]) for r in rows]
+    else:
+        wavs = sorted(args.stereo_dir.glob("*.wav"))
+        logger.info("found %d wavs under %s", len(wavs), args.stereo_dir)
+        durations = sphn.durations([str(p) for p in wavs]) if wavs else []
 
-    str_paths = [str(p) for p in wavs]
-    durations = sphn.durations(str_paths)
+    if not wavs:
+        logger.info("nothing to do")
+        return
 
     train_path = args.out_dir / "train.jsonl"
     val_path = args.out_dir / "val.jsonl"
 
     train_count = 0
     val_count = 0
-    with train_path.open("w") as ftrain, val_path.open("w") as fval:
+    with atomic_write(train_path) as ftrain, atomic_write(val_path) as fval:
         for wav, duration in zip(wavs, durations):
             if duration is None:
                 logger.warning("skip %s (could not read duration)", wav.name)

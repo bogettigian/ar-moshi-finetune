@@ -8,7 +8,14 @@ from pathlib import Path
 
 import torch
 
-from common import count_dominant_speakers, iter_audio_files, parse_rttm
+from common import (
+    atomic_write,
+    count_dominant_speakers,
+    iter_audio_files,
+    parse_rttm,
+    silence_audio_backend_warnings,
+    sweep_temp_files,
+)
 
 _torch_load_orig = torch.load
 
@@ -39,9 +46,19 @@ def diarize_one(pipeline: Pipeline, audio_path: Path) -> Path:
         return rttm_path
     logger.info("diarizing %s", audio_path.name)
     diarization = pipeline(str(audio_path))
-    with rttm_path.open("w") as fh:
+    with atomic_write(rttm_path) as fh:
         diarization.write_rttm(fh)
     return rttm_path
+
+
+def resolve_device(preferred: str | None) -> str:
+    if preferred:
+        return preferred
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 def main() -> None:
@@ -51,7 +68,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--in-dir", type=Path, default=Path("./data/raw_mp3"))
     parser.add_argument("--model", default="pyannote/speaker-diarization-3.1")
-    parser.add_argument("--device", default="cuda")
+    parser.add_argument(
+        "--device",
+        default=None,
+        help="Torch device. Default: cuda, else mps, else cpu.",
+    )
     parser.add_argument(
         "--min-share",
         type=float,
@@ -66,7 +87,9 @@ def main() -> None:
             "no HUGGINGFACE_TOKEN / HF_TOKEN in env — pyannote download may fail"
         )
 
-    pipeline = load_pipeline(args.model, args.device, hf_token)
+    silence_audio_backend_warnings()
+    sweep_temp_files(args.in_dir)
+    pipeline = load_pipeline(args.model, resolve_device(args.device), hf_token)
 
     audio_paths = iter_audio_files(args.in_dir)
     logger.info("found %d audio files under %s", len(audio_paths), args.in_dir)

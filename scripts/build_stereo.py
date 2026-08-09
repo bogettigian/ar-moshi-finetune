@@ -12,7 +12,15 @@ import sphn
 import torchaudio
 import torchaudio.functional as F
 
-from common import Segment, count_dominant_speakers, iter_audio_files, parse_rttm
+from common import (
+    Segment,
+    atomic_path,
+    count_dominant_speakers,
+    iter_audio_files,
+    parse_rttm,
+    silence_audio_backend_warnings,
+    sweep_temp_files,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +93,8 @@ def build_one(
             continue
         stereo[ch, start_sample:end_sample] = mono[start_sample:end_sample]
 
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    sphn.write_wav(str(out_path), stereo, sample_rate=sr)
+    with atomic_path(out_path) as tmp:
+        sphn.write_wav(str(tmp), stereo, sample_rate=sr)
     logger.info("wrote %s (%.1fs)", out_path, n_samples / sr)
     return out_path
 
@@ -111,6 +119,8 @@ def main() -> None:
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    silence_audio_backend_warnings()
+    sweep_temp_files(args.out_dir)
 
     audio_paths = iter_audio_files(args.audio_dir)
     logger.info("found %d audio files under %s", len(audio_paths), args.audio_dir)

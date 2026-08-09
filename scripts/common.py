@@ -1,15 +1,64 @@
 from __future__ import annotations
 
+import logging
+import os
+import struct
+import warnings
 from collections import defaultdict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from typing import IO, Iterator
+
+logger = logging.getLogger(__name__)
+
+
+def silence_audio_backend_warnings() -> None:
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*MPEG_LAYER_III subtype is unknown to TorchAudio.*",
+        category=UserWarning,
+    )
 
 AUDIO_EXTS = (".mp3", ".m4a")
+
+# Appended after the full filename, so `ep.wav.tmp-123` never matches a
+# `*.wav` glob and half-written files stay invisible to the next stage.
+TMP_SUFFIX = ".tmp-"
 
 
 def iter_audio_files(root: Path) -> list[Path]:
     paths = {p for ext in AUDIO_EXTS for p in root.rglob(f"*{ext}")}
     return sorted(paths)
+
+
+@contextmanager
+def atomic_path(path: Path) -> Iterator[Path]:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f"{path.name}{TMP_SUFFIX}{os.getpid()}")
+    try:
+        yield tmp
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+@contextmanager
+def atomic_write(path: Path, mode: str = "w", **kwargs) -> Iterator[IO]:
+    with atomic_path(path) as tmp:
+        with tmp.open(mode, **kwargs) as fh:
+            yield fh
+
+
+def sweep_temp_files(root: Path) -> int:
+    removed = 0
+    for tmp in root.rglob(f"*{TMP_SUFFIX}*"):
+        tmp.unlink(missing_ok=True)
+        removed += 1
+    if removed:
+        logger.info("removed %d orphaned temp file(s) under %s", removed, root)
+    return removed
 
 
 @dataclass(frozen=True)
@@ -37,6 +86,27 @@ def parse_rttm(rttm_path: Path) -> list[Segment]:
             )
         )
     return segments
+
+
+def wav_duration_sec(path: Path) -> float:
+    header = path.read_bytes()[:44]
+    if header[:4] != b"RIFF" or header[8:12] != b"WAVE":
+        raise ValueError(f"not a RIFF/WAVE file: {path}")
+    byte_rate = struct.unpack("<I", header[28:32])[0]
+    if byte_rate == 0:
+        raise ValueError(f"zero byte rate in header: {path}")
+    return (path.stat().st_size - 44) / byte_rate
+
+
+def speaker_changes_per_min(segments: list[Segment]) -> float:
+    if not segments:
+        return 0.0
+    ordered = sorted(segments, key=lambda s: s.start)
+    changes = sum(
+        1 for a, b in zip(ordered, ordered[1:]) if a.speaker != b.speaker
+    )
+    span_min = (max(s.end for s in ordered) - min(s.start for s in ordered)) / 60
+    return changes / span_min if span_min > 0 else 0.0
 
 
 def count_dominant_speakers(segments: list[Segment], min_share: float = 0.1) -> int:
