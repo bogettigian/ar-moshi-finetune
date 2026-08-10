@@ -61,9 +61,23 @@ def pick_extension(mime: str | None, url: str) -> str:
     return url_ext if url_ext in AUDIO_EXTS else ".mp3"
 
 
+class FeedUnavailable(RuntimeError):
+    pass
+
+
 def parse_feed(url: str) -> list[FeedEntry]:
     logger.info("parsing feed %s", url)
     parsed = feedparser.parse(url)
+
+    # feedparser never raises: a DNS failure, a 404 and a timeout all come back
+    # as a feed with zero entries, which is indistinguishable from a feed that
+    # simply has no episodes. Some of these sources are intermittent, so
+    # without this check a multi-day run can silently drop several of them.
+    status = parsed.get("status")
+    if status is not None and status >= 400:
+        raise FeedUnavailable(f"{url} returned HTTP {status}")
+    if parsed.get("bozo") and not parsed.entries:
+        raise FeedUnavailable(f"{url}: {parsed.get('bozo_exception')}")
     podcast_title = parsed.feed.get("title") or urlparse(url).netloc
     podcast_slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", podcast_title).strip("-").lower()[:64] or "unnamed"
 
