@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import logging
 import logging.config
 import os
@@ -45,8 +46,17 @@ def _request_stop(signum: int, frame: FrameType | None) -> None:
     logger.warning("signal %d received, finishing current episode then stopping", signum)
 
 
-INDEX_NAME = "index.csv"
-INDEX_KEY = f"stereo/{INDEX_NAME}"
+def index_name(shard: int, num_shards: int) -> str:
+    return "index.csv" if num_shards <= 1 else f"index-{shard}.csv"
+
+
+def in_shard(entry: FeedEntry, shard: int, num_shards: int) -> bool:
+    if num_shards <= 1:
+        return True
+    key = f"{entry.podcast}/{entry.episode_id}".encode()
+    return int(hashlib.md5(key).hexdigest(), 16) % num_shards == shard
+
+
 INDEX_COLUMNS = (
     "wav_name",
     "podcast",
@@ -89,12 +99,8 @@ def publish_stereo(
     index: list[dict[str, str]],
     indexed: set[str],
 ) -> None:
-    """Index the wav, upload it, and only then drop the local copy.
-
-    Deleting after a successful upload is what makes a failed upload safe: the
-    wav survives and the next run picks it up again.
-    """
     wav_name = stereo_path.name
+    name = index_name(args.shard, args.num_shards)
 
     # Order matters. The wav goes up first so that "indexed" always implies
     # "uploaded": if this raises, nothing is recorded and the next run finds the
@@ -122,9 +128,9 @@ def publish_stereo(
             }
         )
         indexed.add(wav_name)
-        write_index(args.stereo_dir / INDEX_NAME, index)
+        write_index(args.stereo_dir / name, index)
 
-    store.upload(args.stereo_dir / INDEX_NAME, INDEX_KEY)
+    store.upload(args.stereo_dir / name, f"stereo/{name}")
     if store.enabled and not args.keep_stereo:
         stereo_path.unlink(missing_ok=True)
 
@@ -213,6 +219,16 @@ def main() -> int:
     )
     parser.add_argument("--s3-prefix", default="corpus")
     parser.add_argument(
+        "--shard", type=int, default=0, help="This worker's index, 0-based."
+    )
+    parser.add_argument(
+        "--num-shards",
+        type=int,
+        default=1,
+        help="Total workers. Episodes are split by a stable hash, so every "
+        "worker takes a disjoint slice (default: %(default)s).",
+    )
+    parser.add_argument(
         "--keep-source",
         action="store_true",
         help="Keep the downloaded audio. Off by default: it is re-downloadable "
@@ -240,17 +256,22 @@ def main() -> int:
 
     # Rehydrate the index when resuming on a fresh instance: without it the
     # record of what was already built is lost and make_jsonl comes up empty.
-    index_path = args.stereo_dir / INDEX_NAME
-    if not index_path.exists() and INDEX_KEY in done_keys:
-        logger.info("restoring %s from s3", INDEX_NAME)
-        store.download(INDEX_KEY, index_path)
+    name = index_name(args.shard, args.num_shards)
+    index_key = f"stereo/{name}"
+    index_path = args.stereo_dir / name
+    if not index_path.exists() and index_key in done_keys:
+        logger.info("restoring %s from s3", name)
+        store.download(index_key, index_path)
     index = load_index(index_path)
     indexed = {row["wav_name"] for row in index}
 
     seen = read_manifest_keys(args.raw_dir)
     feeds = read_feeds_file(args.feeds_file)
+    # The shard goes in the log because every worker writes to the same stdout.
     logger.info(
-        "%d feeds, %d episodes already in the manifest, s3=%s",
+        "shard %d/%d: %d feeds, %d episodes already in the manifest, s3=%s",
+        args.shard,
+        args.num_shards,
         len(feeds),
         len(seen),
         "on" if store.enabled else "off",
@@ -264,6 +285,7 @@ def main() -> int:
     )
     counters = Counters()
 
+    unusable_feeds: list[str] = []
     for feed_url in feeds:
         if _stop:
             break
@@ -271,10 +293,16 @@ def main() -> int:
             entries = parse_feed(feed_url)
         except Exception:
             logger.exception("failed to parse feed %s", feed_url)
+            unusable_feeds.append(feed_url)
             continue
+        if not entries:
+            logger.warning("feed produced no episodes: %s", feed_url)
+            unusable_feeds.append(feed_url)
         for entry in entries[: args.max_episodes_per_feed]:
             if _stop:
                 break
+            if not in_shard(entry, args.shard, args.num_shards):
+                continue
             try:
                 process_episode(
                     entry,
@@ -295,9 +323,23 @@ def main() -> int:
     # wav is already in S3, and this closes the gap without extra bookkeeping.
     manifest = args.raw_dir / "manifest.csv"
     if manifest.exists():
-        store.upload(manifest, "manifest.csv")
+        # Per-shard key for the same reason as the index: every worker keeps its
+        # own local manifest, and a single shared key would keep one at random.
+        suffix = "" if args.num_shards <= 1 else f"-{args.shard}"
+        store.upload(manifest, f"manifest{suffix}.csv")
     if index_path.exists():
-        store.upload(index_path, INDEX_KEY)
+        store.upload(index_path, index_key)
+
+    # Reported at the end and loudly: a source that was down when the run
+    # started contributes nothing for the whole run, and that is easy to miss
+    # among thousands of log lines.
+    if unusable_feeds:
+        logger.warning(
+            "%d of %d feeds contributed nothing: %s",
+            len(unusable_feeds),
+            len(feeds),
+            ", ".join(unusable_feeds),
+        )
 
     logger.info(
         f"built {counters.done}, rejected {counters.rejected}, "

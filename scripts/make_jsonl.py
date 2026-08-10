@@ -49,11 +49,19 @@ def main() -> None:
     # The pipeline deletes each wav once it is in S3, so the index is the only
     # local record of what the corpus contains. Fall back to scanning the
     # directory when running without S3 (smoke tests, local experiments).
-    index_path = args.stereo_dir / "index.csv"
-    if index_path.exists():
-        with index_path.open(newline="") as fh:
-            rows = sorted(csv.DictReader(fh), key=lambda r: r["wav_name"])
-        logger.info("found %d entries in %s", len(rows), index_path)
+    # One index per worker (index-0.csv, index-1.csv, ...), plus any index.csv
+    # left by an earlier single-process run. Reading all of them is what keeps
+    # the episodes from those runs in the corpus.
+    index_paths = sorted(args.stereo_dir.glob("index*.csv"))
+    if index_paths:
+        rows = []
+        for path in index_paths:
+            with path.open(newline="") as fh:
+                rows.extend(csv.DictReader(fh))
+        rows = sorted(rows, key=lambda r: r["wav_name"])
+        logger.info(
+            "found %d entries across %d index file(s)", len(rows), len(index_paths)
+        )
         wavs = [args.path_prefix / r["wav_name"] for r in rows]
         durations = [float(r["duration_sec"]) for r in rows]
     else:
