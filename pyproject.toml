@@ -18,6 +18,7 @@ dependencies = [
   # compatibility with `pip install -e .`
   "moshi @ git+https://github.com/kyutai-labs/moshi.git#subdirectory=moshi",
   "sphn>=0.2.0,<0.3.0",
+  "soundfile",
   "auditok==0.2",
   "whisper_timestamped",
   "pyannote.audio",

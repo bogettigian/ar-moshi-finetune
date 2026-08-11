@@ -11,7 +11,7 @@ import torch
 from common import (
     atomic_write,
     count_dominant_speakers,
-    iter_audio_files,
+    iter_decoded_files,
     parse_rttm,
     silence_audio_backend_warnings,
     sweep_temp_files,
@@ -40,7 +40,7 @@ def load_pipeline(
     pipeline.to(torch.device(device))
 
     pipeline.segmentation_batch_size = batch_size
-    pipeline.embedding_batch_size = batch_size
+    pipeline.embedding_batch_size = 1
     return pipeline
 
 
@@ -105,8 +105,10 @@ def main() -> None:
         args.model, resolve_device(args.device), hf_token, args.batch_size
     )
 
-    audio_paths = iter_audio_files(args.in_dir)
-    logger.info("found %d audio files under %s", len(audio_paths), args.in_dir)
+    audio_paths = iter_decoded_files(args.in_dir)
+    logger.info(
+        "found %d decoded episodes under %s", len(audio_paths), args.in_dir
+    )
 
     kept = 0
     rejected_path = args.in_dir / "diarization_rejected.txt"

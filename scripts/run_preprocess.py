@@ -6,6 +6,7 @@ import hashlib
 import logging
 import logging.config
 import os
+import shutil
 import signal
 import sys
 from dataclasses import dataclass
@@ -14,8 +15,11 @@ from types import FrameType
 
 from build_stereo import build_one
 from common import (
+    DECODED_EXT,
     atomic_write,
+    decode_to_wav,
     parse_rttm,
+    rss_gb,
     silence_audio_backend_warnings,
     speaker_changes_per_min,
     sweep_temp_files,
@@ -166,7 +170,19 @@ def process_episode(
         counters.done += 1
         return
 
-    audio_path = download(entry, args.raw_dir, timeout=args.timeout)
+    audio_path = args.raw_dir / entry.podcast / f"{entry.episode_id}{DECODED_EXT}"
+    if audio_path.exists():
+        # Left by a run that got further than the download but never finished.
+        # Re-fetching and re-decoding it would be pure waste.
+        logger.debug("skip download and decode (exists): %s", audio_path.name)
+    else:
+        source_path = download(entry, args.raw_dir, timeout=args.timeout)
+        decode_to_wav(source_path, audio_path, args.sample_rate)
+        # The original is dead weight from here on -- nothing downstream opens
+        # it -- and keeping both would double the disk a long run needs.
+        if not args.keep_source:
+            source_path.unlink(missing_ok=True)
+
     rttm_path = diarize_one(pipeline, audio_path)
     append_manifest(args.raw_dir, entry, audio_path, seen)
 
@@ -231,8 +247,9 @@ def main() -> int:
     parser.add_argument(
         "--keep-source",
         action="store_true",
-        help="Keep the downloaded audio. Off by default: it is re-downloadable "
-        "from the feed and the stereo wav is what training consumes.",
+        help="Keep the downloaded episode and its decoded wav. Off by default: "
+        "both are reproducible from the feed and the stereo wav is what "
+        "training consumes.",
     )
     parser.add_argument(
         "--keep-stereo",
@@ -318,6 +335,24 @@ def main() -> int:
             except Exception:
                 logger.exception("failed on %s / %s", entry.podcast, entry.episode_id)
                 counters.failed += 1
+
+            # Logged for every episode, including the failures. Two attempts at
+            # sizing this pipeline from estimates were wrong, and an OOM kill
+            # only ever reports the number that finally broke it -- this is the
+            # series that shows whether either resource grows across a run.
+            # Disk is here because a failed episode leaves its decoded wav
+            # behind, deliberately, so a retry does not download it again.
+            current, peak = rss_gb()
+            free = shutil.disk_usage(args.raw_dir).free / (1 << 30)
+            logger.info(
+                "rss %.1f GB (peak %.1f GB), disk free %.1f GB, after %s / %s (%.2f h)",
+                current,
+                peak,
+                free,
+                entry.podcast,
+                entry.episode_id,
+                (entry.duration_sec_estimated or 0.0) / 3600,
+            )
 
     # Re-upload both records at the end: if an index upload failed mid-run the
     # wav is already in S3, and this closes the gap without extra bookkeeping.

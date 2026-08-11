@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import logging
 import os
+import resource
+import shutil
 import struct
+import subprocess
+import sys
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
@@ -22,14 +26,15 @@ def silence_audio_backend_warnings() -> None:
 
 AUDIO_EXTS = (".mp3", ".m4a")
 
+DECODED_EXT = ".wav"
+
 # Appended after the full filename, so `ep.wav.tmp-123` never matches a
 # `*.wav` glob and half-written files stay invisible to the next stage.
 TMP_SUFFIX = ".tmp-"
 
 
-def iter_audio_files(root: Path) -> list[Path]:
-    paths = {p for ext in AUDIO_EXTS for p in root.rglob(f"*{ext}")}
-    return sorted(paths)
+def iter_decoded_files(root: Path) -> list[Path]:
+    return sorted(root.rglob(f"*{DECODED_EXT}"))
 
 
 @contextmanager
@@ -49,6 +54,58 @@ def atomic_write(path: Path, mode: str = "w", **kwargs) -> Iterator[IO]:
     with atomic_path(path) as tmp:
         with tmp.open(mode, **kwargs) as fh:
             yield fh
+
+
+class DecodeFailed(RuntimeError):
+    pass
+
+
+def decode_to_wav(src: Path, dest: Path, sample_rate: int) -> Path:
+    if shutil.which("ffmpeg") is None:
+        raise DecodeFailed("ffmpeg is not on PATH; it decodes every episode")
+
+    with atomic_path(dest) as tmp:
+        result = subprocess.run(
+            [
+                "ffmpeg",
+                # cloud-init gives the process no usable stdin, and ffmpeg
+                # otherwise waits on it before overwriting anything.
+                "-nostdin",
+                "-v", "error",
+                "-i", str(src),
+                "-ac", "1",
+                "-ar", str(sample_rate),
+                "-c:a", "pcm_s16le",
+                # Named explicitly: atomic_path hands us a `.tmp-<pid>` name, so
+                # there is no extension left for ffmpeg to pick a muxer from.
+                "-f", "wav",
+                "-y", str(tmp),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            raise DecodeFailed(
+                f"ffmpeg failed on {src.name} ({result.returncode}): "
+                f"{result.stderr.strip()}"
+            )
+    return dest
+
+
+def rss_gb() -> tuple[float, float]:
+    # getrusage reports kilobytes on Linux and bytes on macOS.
+    scale = 1 << 20 if sys.platform.startswith("linux") else 1 << 30
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / scale
+
+    current = 0.0
+    try:
+        for line in Path("/proc/self/status").read_text().splitlines():
+            if line.startswith("VmRSS:"):
+                current = int(line.split()[1]) / (1 << 20)
+                break
+    except OSError:
+        pass
+    return current, peak
 
 
 def sweep_temp_files(root: Path) -> int:

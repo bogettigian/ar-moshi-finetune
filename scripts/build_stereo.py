@@ -8,21 +8,21 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import sphn
-import torchaudio
-import torchaudio.functional as F
+import soundfile as sf
 
 from common import (
     Segment,
     atomic_path,
     count_dominant_speakers,
-    iter_audio_files,
+    iter_decoded_files,
     parse_rttm,
     silence_audio_backend_warnings,
     sweep_temp_files,
 )
 
 logger = logging.getLogger(__name__)
+
+BLOCK_SEC = 60
 
 
 def pick_top_two_speakers(segments: list[Segment]) -> tuple[str, str]:
@@ -40,6 +40,25 @@ def assign_channels(mp3_name: str, speakers: tuple[str, str]) -> dict[str, int]:
     if digest % 2 == 0:
         return {speakers[0]: 0, speakers[1]: 1}
     return {speakers[1]: 0, speakers[0]: 1}
+
+
+def speaker_ranges(
+    segments: list[Segment],
+    channel_by_speaker: dict[str, int],
+    sample_rate: int,
+    n_samples: int,
+) -> list[tuple[int, int, int]]:
+    ranges: list[tuple[int, int, int]] = []
+    for seg in segments:
+        channel = channel_by_speaker.get(seg.speaker)
+        if channel is None:
+            continue
+        start = max(0, int(seg.start * sample_rate))
+        end = min(n_samples, int(seg.end * sample_rate))
+        if end > start:
+            ranges.append((start, end, channel))
+    ranges.sort()
+    return ranges
 
 
 def build_one(
@@ -72,29 +91,54 @@ def build_one(
         return None
 
     channel_by_speaker = assign_channels(audio_path.name, top_two)
-    keep_speakers = set(top_two)
 
-    waveform, sr_orig = torchaudio.load(str(audio_path))
-    if sr_orig != sample_rate:
-        waveform = F.resample(waveform, sr_orig, sample_rate)
-    sr = sample_rate
-    arr = waveform.numpy().astype(np.float32)
-    mono = arr[0] if arr.ndim > 1 else arr
-    n_samples = mono.shape[-1]
+    with sf.SoundFile(str(audio_path)) as fin:
+        if fin.samplerate != sample_rate or fin.channels != 1:
+            raise ValueError(
+                f"{audio_path.name} is {fin.samplerate} Hz / {fin.channels} ch, "
+                f"expected {sample_rate} Hz mono; it did not come from "
+                "decode_to_wav"
+            )
+        sr = fin.samplerate
+        n_samples = len(fin)
+        ranges = speaker_ranges(segments, channel_by_speaker, sr, n_samples)
 
-    stereo = np.zeros((2, n_samples), dtype=np.float32)
-    for seg in segments:
-        if seg.speaker not in keep_speakers:
-            continue
-        ch = channel_by_speaker[seg.speaker]
-        start_sample = max(0, int(seg.start * sr))
-        end_sample = min(n_samples, int(seg.end * sr))
-        if end_sample <= start_sample:
-            continue
-        stereo[ch, start_sample:end_sample] = mono[start_sample:end_sample]
+        with atomic_path(out_path) as tmp:
+            with sf.SoundFile(
+                str(tmp),
+                "w",
+                samplerate=sr,
+                channels=2,
+                subtype="PCM_16",
+                # Spelled out because atomic_path hands us a `.tmp-<pid>` name
+                # and there is no extension left to infer the container from.
+                format="WAV",
+            ) as fout:
+                # `first` is the oldest range that might still overlap the
+                # block ahead; ranges before it are entirely behind us. Without
+                # it every block would rescan all of an episode's segments.
+                first = offset = 0
+                while True:
+                    block = fin.read(BLOCK_SEC * sr, dtype="float32")
+                    if not len(block):
+                        break
+                    block_end = offset + len(block)
+                    stereo = np.zeros((len(block), 2), dtype=np.float32)
 
-    with atomic_path(out_path) as tmp:
-        sphn.write_wav(str(tmp), stereo, sample_rate=sr)
+                    i = first
+                    while i < len(ranges) and ranges[i][0] < block_end:
+                        start_sample, end_sample, channel = ranges[i]
+                        start = max(start_sample, offset) - offset
+                        end = min(end_sample, block_end) - offset
+                        if end > start:
+                            stereo[start:end, channel] = block[start:end]
+                        if end_sample <= block_end and i == first:
+                            first += 1
+                        i += 1
+
+                    fout.write(stereo)
+                    offset = block_end
+
     logger.info("wrote %s (%.1fs)", out_path, n_samples / sr)
     return out_path
 
@@ -104,7 +148,13 @@ def main() -> None:
     logging.config.fileConfig("log.ini", disable_existing_loggers=False)
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--audio-dir", type=Path, default=Path("./data/raw_mp3"))
+    parser.add_argument(
+        "--audio-dir",
+        type=Path,
+        default=Path("./data/raw_mp3"),
+        help="Holds the decoded wavs written by run_preprocess, not the "
+        "downloaded episodes: the originals are never read here.",
+    )
     parser.add_argument("--out-dir", type=Path, default=Path("./data/stereo"))
     parser.add_argument("--sample-rate", type=int, default=24000)
     parser.add_argument(
@@ -122,8 +172,8 @@ def main() -> None:
     silence_audio_backend_warnings()
     sweep_temp_files(args.out_dir)
 
-    audio_paths = iter_audio_files(args.audio_dir)
-    logger.info("found %d audio files under %s", len(audio_paths), args.audio_dir)
+    audio_paths = iter_decoded_files(args.audio_dir)
+    logger.info("found %d decoded episodes under %s", len(audio_paths), args.audio_dir)
 
     written = skipped = 0
     for audio_path in audio_paths:
