@@ -190,7 +190,7 @@ def read_manifest_keys(out_dir: Path) -> set[tuple[str, str]]:
     manifest_path = out_dir / "manifest.csv"
     if not manifest_path.exists():
         return set()
-    with manifest_path.open(newline="") as fh:
+    with manifest_path.open(newline="", encoding="utf-8") as fh:
         return {(row["podcast"], row["episode_id"]) for row in csv.DictReader(fh)}
 
 
@@ -203,7 +203,7 @@ def append_manifest(
         return
     manifest_path = out_dir / "manifest.csv"
     is_new = not manifest_path.exists()
-    with manifest_path.open("a", newline="") as fh:
+    with manifest_path.open("a", newline="", encoding="utf-8") as fh:
         writer = csv.writer(fh)
         if is_new:
             writer.writerow(MANIFEST_COLUMNS)
@@ -223,7 +223,7 @@ def append_manifest(
 
 def read_feeds_file(path: Path) -> list[str]:
     feeds: list[str] = []
-    for line in path.read_text().splitlines():
+    for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue

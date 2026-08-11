@@ -129,7 +129,9 @@ def main() -> None:
             rejected_lines.append(f"{audio_path}\t{n_dominant}")
 
     if rejected_lines:
-        rejected_path.write_text("\n".join(rejected_lines) + "\n")
+        rejected_path.write_text(
+            "\n".join(rejected_lines) + "\n", encoding="utf-8"
+        )
 
     logger.info(
         f"diarized {len(audio_paths)} files, {kept} kept (2 dominant speakers), "

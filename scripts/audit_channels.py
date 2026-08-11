@@ -162,7 +162,7 @@ def main() -> None:
             )
 
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
-    with args.out_csv.open("w", newline="") as fh:
+    with args.out_csv.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=list(asdict(rows[0]).keys()) if rows else [])
         writer.writeheader()
         for row in rows:

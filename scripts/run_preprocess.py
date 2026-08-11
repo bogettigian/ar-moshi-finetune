@@ -74,7 +74,7 @@ INDEX_COLUMNS = (
 def load_index(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
-    with path.open(newline="") as fh:
+    with path.open(newline="", encoding="utf-8") as fh:
         return list(csv.DictReader(fh))
 
 

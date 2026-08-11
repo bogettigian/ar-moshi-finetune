@@ -51,6 +51,8 @@ def atomic_path(path: Path) -> Iterator[Path]:
 
 @contextmanager
 def atomic_write(path: Path, mode: str = "w", **kwargs) -> Iterator[IO]:
+    if "b" not in mode:
+        kwargs.setdefault("encoding", "utf-8")
     with atomic_path(path) as tmp:
         with tmp.open(mode, **kwargs) as fh:
             yield fh
@@ -162,7 +164,7 @@ class Segment:
 
 def parse_rttm(rttm_path: Path) -> list[Segment]:
     segments: list[Segment] = []
-    for line in rttm_path.read_text().splitlines():
+    for line in rttm_path.read_text(encoding="utf-8").splitlines():
         parts = line.split()
         if len(parts) < 8 or parts[0] != "SPEAKER":
             continue

@@ -56,7 +56,7 @@ def main() -> None:
     if index_paths:
         rows = []
         for path in index_paths:
-            with path.open(newline="") as fh:
+            with path.open(newline="", encoding="utf-8") as fh:
                 rows.extend(csv.DictReader(fh))
         rows = sorted(rows, key=lambda r: r["wav_name"])
         logger.info(
