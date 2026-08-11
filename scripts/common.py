@@ -92,20 +92,51 @@ def decode_to_wav(src: Path, dest: Path, sample_rate: int) -> Path:
     return dest
 
 
-def rss_gb() -> tuple[float, float]:
-    # getrusage reports kilobytes on Linux and bytes on macOS.
-    scale = 1 << 20 if sys.platform.startswith("linux") else 1 << 30
-    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / scale
-
-    current = 0.0
+def _current_rss_kb() -> int | None:
     try:
         for line in Path("/proc/self/status").read_text().splitlines():
             if line.startswith("VmRSS:"):
-                current = int(line.split()[1]) / (1 << 20)
-                break
+                return int(line.split()[1])
     except OSError:
         pass
-    return current, peak
+
+    try:
+        out = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(os.getpid())],
+            capture_output=True,
+            text=True,
+        )
+        return int(out.stdout.strip())
+    except (OSError, ValueError):
+        return None
+
+
+def rss_gb() -> tuple[float, float]:
+    scale = 1 << 20 if sys.platform.startswith("linux") else 1 << 30
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / scale
+
+    current_kb = _current_rss_kb()
+    if current_kb is None:
+        logger.warning("cannot read resident memory on this platform")
+        return float("nan"), peak
+    return current_kb / (1 << 20), peak
+
+
+class MemTrace:
+    def __init__(self) -> None:
+        self.start = rss_gb()[0]
+        self.marks: list[tuple[str, float]] = []
+
+    def mark(self, stage: str) -> None:
+        self.marks.append((stage, rss_gb()[0]))
+
+    def summary(self) -> str:
+        parts = [f"start {self.start:.1f}"]
+        previous = self.start
+        for stage, current in self.marks:
+            parts.append(f"{stage} {current - previous:+.1f} -> {current:.1f}")
+            previous = current
+        return f"{' | '.join(parts)} | peak {rss_gb()[1]:.1f}"
 
 
 def sweep_temp_files(root: Path) -> int:

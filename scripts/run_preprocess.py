@@ -16,10 +16,10 @@ from types import FrameType
 from build_stereo import build_one
 from common import (
     DECODED_EXT,
+    MemTrace,
     atomic_write,
     decode_to_wav,
     parse_rttm,
-    rss_gb,
     silence_audio_backend_warnings,
     speaker_changes_per_min,
     sweep_temp_files,
@@ -149,6 +149,7 @@ def process_episode(
     index: list[dict[str, str]],
     indexed: set[str],
     counters: Counters,
+    mem: MemTrace,
 ) -> None:
     wav_name = f"{entry.podcast}__{entry.episode_id}.wav"
     stereo_key = f"stereo/{wav_name}"
@@ -184,6 +185,7 @@ def process_episode(
             source_path.unlink(missing_ok=True)
 
     rttm_path = diarize_one(pipeline, audio_path)
+    mem.mark("diarize")
     append_manifest(args.raw_dir, entry, audio_path, seen)
 
     rttm_key = f"rttm/{entry.podcast}/{rttm_path.name}"
@@ -194,6 +196,7 @@ def process_episode(
     result = build_one(
         audio_path, rttm_path, stereo_path, args.sample_rate, args.min_share
     )
+    mem.mark("build")
     if result is None:
         # Rejected by the 2-speaker filter. The rttm stays as the record of why.
         counters.rejected += 1
@@ -320,6 +323,7 @@ def main() -> int:
                 break
             if not in_shard(entry, args.shard, args.num_shards):
                 continue
+            mem = MemTrace()
             try:
                 process_episode(
                     entry,
@@ -331,43 +335,28 @@ def main() -> int:
                     index,
                     indexed,
                     counters,
+                    mem,
                 )
             except Exception:
                 logger.exception("failed on %s / %s", entry.podcast, entry.episode_id)
                 counters.failed += 1
+            finally:
+                logger.info(
+                    "mem %s / %s (%.2f h): %s | disk free %.1f GB",
+                    entry.podcast,
+                    entry.episode_id,
+                    (entry.duration_sec_estimated or 0.0) / 3600,
+                    mem.summary(),
+                    shutil.disk_usage(args.raw_dir).free / (1 << 30),
+                )
 
-            # Logged for every episode, including the failures. Two attempts at
-            # sizing this pipeline from estimates were wrong, and an OOM kill
-            # only ever reports the number that finally broke it -- this is the
-            # series that shows whether either resource grows across a run.
-            # Disk is here because a failed episode leaves its decoded wav
-            # behind, deliberately, so a retry does not download it again.
-            current, peak = rss_gb()
-            free = shutil.disk_usage(args.raw_dir).free / (1 << 30)
-            logger.info(
-                "rss %.1f GB (peak %.1f GB), disk free %.1f GB, after %s / %s (%.2f h)",
-                current,
-                peak,
-                free,
-                entry.podcast,
-                entry.episode_id,
-                (entry.duration_sec_estimated or 0.0) / 3600,
-            )
-
-    # Re-upload both records at the end: if an index upload failed mid-run the
-    # wav is already in S3, and this closes the gap without extra bookkeeping.
     manifest = args.raw_dir / "manifest.csv"
     if manifest.exists():
-        # Per-shard key for the same reason as the index: every worker keeps its
-        # own local manifest, and a single shared key would keep one at random.
         suffix = "" if args.num_shards <= 1 else f"-{args.shard}"
         store.upload(manifest, f"manifest{suffix}.csv")
     if index_path.exists():
         store.upload(index_path, index_key)
 
-    # Reported at the end and loudly: a source that was down when the run
-    # started contributes nothing for the whole run, and that is easy to miss
-    # among thousands of log lines.
     if unusable_feeds:
         logger.warning(
             "%d of %d feeds contributed nothing: %s",
