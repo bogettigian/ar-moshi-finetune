@@ -4,7 +4,6 @@ import argparse
 import csv
 import hashlib
 import logging
-import logging.config
 import re
 import time
 from dataclasses import dataclass
@@ -14,7 +13,7 @@ from urllib.parse import urlparse
 import feedparser
 import requests
 
-from common import AUDIO_EXTS, atomic_path, sweep_temp_files
+from common import AUDIO_EXTS, atomic_path, setup_logging, sweep_temp_files
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class FeedUnavailable(RuntimeError):
 
 
 def parse_feed(url: str) -> list[FeedEntry]:
-    logger.info("parsing feed %s", url)
+    logger.debug("parsing feed %s", url)
     parsed = feedparser.parse(url)
 
     # feedparser never raises: a DNS failure, a 404 and a timeout all come back
@@ -164,7 +163,9 @@ def download(
         if existing.exists():
             logger.debug("skip (exists): %s", existing)
             return existing
-    logger.info("downloading %s in %s", entry.url, local_path)
+    # Debug: the url is long, repeated once per episode, and already
+    # recorded in the manifest. It only matters when a feed misbehaves.
+    logger.debug("downloading %s in %s", entry.url, local_path)
     for attempt in range(1, attempts + 1):
         try:
             with atomic_path(local_path) as tmp:
@@ -232,8 +233,7 @@ def read_feeds_file(path: Path) -> list[str]:
 
 
 def main() -> None:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feeds-file", type=Path, required=True)

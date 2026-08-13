@@ -4,7 +4,6 @@ import argparse
 import csv
 import hashlib
 import logging
-import logging.config
 import os
 import shutil
 import signal
@@ -16,10 +15,12 @@ from types import FrameType
 from build_stereo import build_one
 from common import (
     DECODED_EXT,
-    MemTrace,
+    EpisodeTrace,
     atomic_write,
+    count_dominant_speakers,
     decode_to_wav,
     parse_rttm,
+    setup_logging,
     silence_audio_backend_warnings,
     speaker_changes_per_min,
     sweep_temp_files,
@@ -149,15 +150,17 @@ def process_episode(
     index: list[dict[str, str]],
     indexed: set[str],
     counters: Counters,
-    mem: MemTrace,
+    trace: EpisodeTrace,
 ) -> None:
     wav_name = f"{entry.podcast}__{entry.episode_id}.wav"
     stereo_key = f"stereo/{wav_name}"
     stereo_path = args.stereo_dir / wav_name
     rttm_path = args.raw_dir / entry.podcast / f"{entry.episode_id}.rttm"
+    rttm_key = f"rttm/{entry.podcast}/{rttm_path.name}"
 
     if wav_name in indexed or stereo_key in done_keys:
         logger.debug("skip (already built): %s", wav_name)
+        trace.outcome = "skipped"
         counters.skipped += 1
         return
 
@@ -168,8 +171,20 @@ def process_episode(
         publish_stereo(
             entry, stereo_path, rttm_path, args, store, done_keys, index, indexed
         )
+        trace.outcome = "uploaded"
         counters.done += 1
         return
+
+    if not rttm_path.exists() and not args.rediarize and rttm_key in done_keys:
+        logger.debug("restoring rttm from s3: %s", rttm_key)
+        store.download(rttm_key, rttm_path)
+
+    if rttm_path.exists():
+        n_dominant = count_dominant_speakers(parse_rttm(rttm_path), args.min_share)
+        if n_dominant != 2:
+            trace.outcome = f"rejected ({n_dominant} speakers)"
+            counters.rejected += 1
+            return
 
     audio_path = args.raw_dir / entry.podcast / f"{entry.episode_id}{DECODED_EXT}"
     if audio_path.exists():
@@ -184,11 +199,11 @@ def process_episode(
         if not args.keep_source:
             source_path.unlink(missing_ok=True)
 
+    # A no-op when the rttm is already on disk, restored or otherwise.
     rttm_path = diarize_one(pipeline, audio_path)
-    mem.mark("diarize")
+    trace.mark("diarize")
     append_manifest(args.raw_dir, entry, audio_path, seen)
 
-    rttm_key = f"rttm/{entry.podcast}/{rttm_path.name}"
     if rttm_key not in done_keys:
         store.upload(rttm_path, rttm_key)
         done_keys.add(rttm_key)
@@ -196,14 +211,16 @@ def process_episode(
     result = build_one(
         audio_path, rttm_path, stereo_path, args.sample_rate, args.min_share
     )
-    mem.mark("build")
+    trace.mark("build")
     if result is None:
         # Rejected by the 2-speaker filter. The rttm stays as the record of why.
+        trace.outcome = "rejected"
         counters.rejected += 1
     else:
         publish_stereo(
             entry, stereo_path, rttm_path, args, store, done_keys, index, indexed
         )
+        trace.outcome = "built"
         counters.done += 1
 
     if not args.keep_source:
@@ -211,8 +228,7 @@ def process_episode(
 
 
 def main() -> int:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--feeds-file", type=Path, required=True)
@@ -246,6 +262,13 @@ def main() -> int:
         default=1,
         help="Total workers. Episodes are split by a stable hash, so every "
         "worker takes a disjoint slice (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--rediarize",
+        action="store_true",
+        help="Ignore rttms already in the store and diarize again. Needed when "
+        "the diarization config changes, since stored rttms are otherwise "
+        "reused without question.",
     )
     parser.add_argument(
         "--keep-source",
@@ -323,7 +346,7 @@ def main() -> int:
                 break
             if not in_shard(entry, args.shard, args.num_shards):
                 continue
-            mem = MemTrace()
+            trace = EpisodeTrace()
             try:
                 process_episode(
                     entry,
@@ -335,20 +358,21 @@ def main() -> int:
                     index,
                     indexed,
                     counters,
-                    mem,
+                    trace,
                 )
             except Exception:
                 logger.exception("failed on %s / %s", entry.podcast, entry.episode_id)
                 counters.failed += 1
             finally:
                 logger.info(
-                    "mem %s / %s (%.2f h): %s | disk free %.1f GB",
+                    "%s/%s (%.2f h) %s | disk %.1f GB free",
                     entry.podcast,
                     entry.episode_id,
                     (entry.duration_sec_estimated or 0.0) / 3600,
-                    mem.summary(),
+                    trace.summary(),
                     shutil.disk_usage(args.raw_dir).free / (1 << 30),
                 )
+                logger.debug("memory by stage: %s", trace.stages())
 
     manifest = args.raw_dir / "manifest.csv"
     if manifest.exists():

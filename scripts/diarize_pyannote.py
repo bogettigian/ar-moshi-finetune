@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import logging.config
 import os
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from common import (
     count_dominant_speakers,
     iter_decoded_files,
     parse_rttm,
+    setup_logging,
     silence_audio_backend_warnings,
     sweep_temp_files,
 )
@@ -67,8 +67,7 @@ def resolve_device(preferred: str | None) -> str:
 
 
 def main() -> None:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--in-dir", type=Path, default=Path("./data/raw_mp3"))

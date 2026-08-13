@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import logging.config
 import os
 import resource
 import shutil
 import struct
 import subprocess
 import sys
+import time
 import warnings
 from collections import defaultdict
 from contextlib import contextmanager
@@ -15,6 +17,15 @@ from pathlib import Path
 from typing import IO, Iterator
 
 logger = logging.getLogger(__name__)
+
+
+def setup_logging() -> None:
+    Path("logs").mkdir(exist_ok=True)
+    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    level = os.environ.get("LOG_LEVEL", "").upper()
+    if level:
+        for handler in logging.getLogger().handlers:
+            handler.setLevel(level)
 
 
 def silence_audio_backend_warnings() -> None:
@@ -124,21 +135,34 @@ def rss_gb() -> tuple[float, float]:
     return current_kb / (1 << 20), peak
 
 
-class MemTrace:
+class EpisodeTrace:
+
     def __init__(self) -> None:
         self.start = rss_gb()[0]
+        self.t0 = time.monotonic()
         self.marks: list[tuple[str, float]] = []
+        # Overwritten by every path that returns normally, so an exception that
+        # escapes process_episode is already labelled correctly.
+        self.outcome = "failed"
 
     def mark(self, stage: str) -> None:
         self.marks.append((stage, rss_gb()[0]))
 
-    def summary(self) -> str:
+    def stages(self) -> str:
         parts = [f"start {self.start:.1f}"]
         previous = self.start
         for stage, current in self.marks:
             parts.append(f"{stage} {current - previous:+.1f} -> {current:.1f}")
             previous = current
-        return f"{' | '.join(parts)} | peak {rss_gb()[1]:.1f}"
+        return " | ".join(parts)
+
+    def summary(self) -> str:
+        elapsed = time.monotonic() - self.t0
+        current, peak = rss_gb()
+        return (
+            f"{self.outcome} in {int(elapsed // 60)}m{int(elapsed % 60):02d}s "
+            f"| rss {current:.1f} peak {peak:.1f} GB"
+        )
 
 
 def sweep_temp_files(root: Path) -> int:

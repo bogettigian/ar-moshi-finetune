@@ -3,13 +3,14 @@ from __future__ import annotations
 import argparse
 import csv
 import logging
-import logging.config
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
+
+from common import setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -116,8 +117,7 @@ def analyze(mp3_path: Path, in_dir: Path) -> ChannelStats:
 
 
 def main() -> None:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--in-dir", type=Path, default=Path("./data/raw_mp3"))

@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import logging
-import logging.config
 from collections import defaultdict
 from pathlib import Path
 
@@ -16,6 +15,7 @@ from common import (
     count_dominant_speakers,
     iter_decoded_files,
     parse_rttm,
+    setup_logging,
     silence_audio_backend_warnings,
     sweep_temp_files,
 )
@@ -79,7 +79,7 @@ def build_one(
 
     n_dominant = count_dominant_speakers(segments, min_share)
     if n_dominant != 2:
-        logger.info(
+        logger.debug(
             "reject %s (%d dominant speakers)", audio_path.name, n_dominant
         )
         return None
@@ -139,13 +139,12 @@ def build_one(
                     fout.write(stereo)
                     offset = block_end
 
-    logger.info("wrote %s (%.1fs)", out_path, n_samples / sr)
+    logger.debug("wrote %s (%.1fs)", out_path, n_samples / sr)
     return out_path
 
 
 def main() -> None:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

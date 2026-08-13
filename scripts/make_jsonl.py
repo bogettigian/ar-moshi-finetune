@@ -5,12 +5,11 @@ import csv
 import hashlib
 import json
 import logging
-import logging.config
 from pathlib import Path
 
 import sphn
 
-from common import atomic_write
+from common import atomic_write, setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +21,7 @@ def split_bucket(path: Path, val_fraction: float) -> str:
 
 
 def main() -> None:
-    Path("logs").mkdir(exist_ok=True)
-    logging.config.fileConfig("log.ini", disable_existing_loggers=False)
+    setup_logging()
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stereo-dir", type=Path, default=Path("./data/stereo"))
