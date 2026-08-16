@@ -40,6 +40,13 @@ def main() -> None:
         default=None,
         help="If set, store relative paths in the jsonl (relative to this dir).",
     )
+    parser.add_argument(
+        "--require-alignments",
+        action="store_true",
+        help="Fail unless every wav has its <wav>.json alongside. The trainer "
+        "opens that file for every sample it draws, so without this a corpus "
+        "that was never annotated only fails once training has started.",
+    )
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -70,6 +77,16 @@ def main() -> None:
     if not wavs:
         logger.info("nothing to do")
         return
+
+    if args.require_alignments:
+        missing = [w for w in wavs if not w.with_suffix(".json").exists()]
+        if missing:
+            sample = ", ".join(w.name for w in missing[:5])
+            raise SystemExit(
+                f"{len(missing)} of {len(wavs)} wavs have no alignment json "
+                f"(e.g. {sample}). Run the annotate stage before training."
+            )
+        logger.info("all %d wavs have their alignment json", len(wavs))
 
     train_path = args.out_dir / "train.jsonl"
     val_path = args.out_dir / "val.jsonl"
