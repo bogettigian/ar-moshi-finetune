@@ -1,0 +1,48 @@
+# E1b -- E1 with ft_embed on, and nothing else changed.
+#
+# E1 and E2 differ in two variables at once (rank 8 -> 128 and ft_embed off ->
+# on), so on their own they can say which rung is enough but not what made the
+# difference. This one isolates the embeddings: same rank, same steps, same
+# data, same seed as E1.
+#
+# Note that ft_embed full-finetunes every embedding matrix -- the Temporal
+# text embedding, the Depth text embedding, the audio embeddings and the Text
+# Linear -- not just the text head. The Adam state over those is what eats the
+# memory headroom if this OOMs.
+data:
+  eval_data: data/jsonl/val.jsonl
+  shuffle: true
+  train_data: data/jsonl/train.jsonl
+
+moshi_paths:
+  hf_repo_id: "kyutai/moshiko-pytorch-bf16"
+
+full_finetuning: false
+lora:
+  enable: true
+  rank: 8
+  scaling: 2.
+  ft_embed: true
+
+first_codebook_weight_multiplier: 100.
+text_padding_weight: .5
+
+duration_sec: 100
+batch_size: 16
+max_steps: 1000
+gradient_checkpointing: true
+optim:
+  lr: 2e-6
+  weight_decay: 0.1
+  pct_start: 0.05
+
+seed: 0
+log_freq: 1
+eval_freq: 100
+do_eval: true
+do_ckpt: true
+ckpt_freq: 100
+
+save_adapters: true
+
+run_dir: runs/e1b_lora_min_ftembed_v1
