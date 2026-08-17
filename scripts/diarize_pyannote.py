@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 
 import torch
+from pyannote.audio import Pipeline
 
 from common import (
     atomic_write,
@@ -16,18 +17,7 @@ from common import (
     silence_audio_backend_warnings,
     sweep_temp_files,
 )
-
-_torch_load_orig = torch.load
-
-
-def _torch_load_trusted(*args, **kwargs):
-    kwargs["weights_only"] = False
-    return _torch_load_orig(*args, **kwargs)
-
-
-torch.load = _torch_load_trusted
-
-from pyannote.audio import Pipeline
+from torch_compat import trust_torch_checkpoints
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +26,9 @@ def load_pipeline(
     model: str, device: str, hf_token: str | None, batch_size: int = 32
 ) -> Pipeline:
     logger.info("loading pipeline %s on %s (batch size %d)", model, device, batch_size)
+    # Importing pyannote reads no checkpoint, so this only has to happen here --
+    # which is what lets every import stay at the top of the file.
+    trust_torch_checkpoints()
     pipeline = Pipeline.from_pretrained(model, use_auth_token=hf_token)
     pipeline.to(torch.device(device))
 
