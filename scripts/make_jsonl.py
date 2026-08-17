@@ -79,14 +79,36 @@ def main() -> None:
         return
 
     if args.require_alignments:
-        missing = [w for w in wavs if not w.with_suffix(".json").exists()]
+        # An episode the annotator gave up on is marked with a `.json.err` and
+        # dropped from the corpus. Failing on it instead would let one bad
+        # episode block training for good, which is the wrong trade: a handful
+        # of lost episodes out of hundreds costs nothing.
+        aligned, unusable, missing = [], [], []
+        for wav in wavs:
+            if wav.with_suffix(".json").exists():
+                aligned.append(wav)
+            elif wav.with_suffix(".json.err").exists():
+                unusable.append(wav)
+            else:
+                missing.append(wav)
         if missing:
             sample = ", ".join(w.name for w in missing[:5])
             raise SystemExit(
-                f"{len(missing)} of {len(wavs)} wavs have no alignment json "
-                f"(e.g. {sample}). Run the annotate stage before training."
+                f"{len(missing)} of {len(wavs)} wavs have neither an alignment "
+                f"json nor a .json.err (e.g. {sample}). Run the annotate stage "
+                "before training."
             )
-        logger.info("all %d wavs have their alignment json", len(wavs))
+        if unusable:
+            logger.warning(
+                "dropping %d episode(s) the annotator failed on: %s%s",
+                len(unusable),
+                ", ".join(w.name for w in unusable[:5]),
+                " ..." if len(unusable) > 5 else "",
+            )
+        keep = set(aligned)
+        durations = [d for w, d in zip(wavs, durations) if w in keep]
+        wavs = aligned
+        logger.info("%d wavs with their alignment json", len(wavs))
 
     train_path = args.out_dir / "train.jsonl"
     val_path = args.out_dir / "val.jsonl"
