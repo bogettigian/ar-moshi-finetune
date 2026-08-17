@@ -20,7 +20,14 @@ dependencies = [
   "sphn>=0.2.0,<0.3.0",
   "soundfile",
   "auditok==0.2",
+  # Only upstream's annotate.py uses these two now; the pipeline annotates with
+  # whisperx. Kept so that file stays runnable, and droppable once whisperx has
+  # been validated on the instance.
   "whisper_timestamped",
+  # Capped below 3.5 on purpose: from there on whisperx requires torch~=2.8,
+  # and the trainer pins torch==2.6. 3.4.5 asks for torch>=2.5.1 and resolves
+  # against the existing pins without moving torch, torchaudio or pyannote.
+  "whisperx>=3.3.3,<3.5",
   "pyannote.audio",
   "feedparser",
   "requests",

@@ -120,6 +120,27 @@ auditok==0.2.0 \
     --hash=sha256:336e3157e2f6c4550182b3272a2ea32d2aca7f251d3b7feeff2d355d280cdc1b \
     --hash=sha256:46c512e287b2e13df4819774166af32b236d754afbe6b0dc87281b233e5ae688
     # via finetune (pyproject.toml)
+av==18.1.0 \
+    --hash=sha256:025f84494cb23278498f03b0d8117d3e47a1cbc9c44b97eb31875cf02251e46b \
+    --hash=sha256:08a9ae288299cfcbf739dba4ad0c53b9b71f45184303dd45947920d022fed695 \
+    --hash=sha256:191224788d87af06c31784a395bb73f14b72f33d7f4871ace0157de2abdc6276 \
+    --hash=sha256:3c8b1f8b46f99d52e2d8b0ed5d0cdadf172d24794d46e2077b16e44ed08e26ff \
+    --hash=sha256:47bfc286e1bc9de7ab4681fc2b575cd2460a66919d31ffe1bd5aa54fae531a28 \
+    --hash=sha256:5509ec12aaa19fd6601de13cfa6f4cdad450da07982118510592875d970454d6 \
+    --hash=sha256:5548b79e2bf1f59b3e9aedc918a72d9dc45b9adaac10ff9470d5dbdda0002e47 \
+    --hash=sha256:5cd9085028902c9880622bd37a12fd4b33060f06a52311f6f4867ca9f29a2c3b \
+    --hash=sha256:6fc837cc51adf80331ac850779cd53b5d4c4460b0ebe9057a02a921c6736f19d \
+    --hash=sha256:8a032e8d8ebc73dec079364b9b4a6837638a2d106e8472314e685ffbf163e700 \
+    --hash=sha256:ab5ac081bc9eaf54109120d4e56284674fecfbe520d9aa1707c7fa911ec5f4d2 \
+    --hash=sha256:ae75d8bb6467895ed1f8572ededf7ffa49eac07f6e483222f5d7d62a41d12f04 \
+    --hash=sha256:b30a4e8d934558e19602b68998a4d9ac9f250fa0dacef216f7e8e40153b13316 \
+    --hash=sha256:b36b0bae9e4c62f9487c99481ec15e4e3870fcc868522cd6d18fc2d6bfa04f01 \
+    --hash=sha256:cf8a17466bef07765dbdecc9e66ed9b25d20b4e14f654fbf35345a58ac45fa0c \
+    --hash=sha256:d49a5c542dfdc00f43c6cdb6cc41dac1781ee206fe180b56aa7433dfa816dfae \
+    --hash=sha256:e4d48b9f12cad009cc72fe4f4099107de5e819c95f82767f4fd01a01481c0661 \
+    --hash=sha256:e7ea063f6690193ea335a1d592d6e0274350d45e2ed6af83ee107cb90cbfd84f \
+    --hash=sha256:ea1480b7a8d5405cb5f382b344731bf125fd2c1c6fae3964f6c48595628387ff
+    # via faster-whisper
 bitsandbytes==0.49.2 ; sys_platform == 'linux' \
     --hash=sha256:2e0ddd09cd778155388023cbe81f00afbb7c000c214caef3ce83386e7144df7d \
     --hash=sha256:2fc0830c5f7169be36e60e11f2be067c8f812dfcb829801a8703735842450750 \
@@ -359,6 +380,10 @@ charset-normalizer==3.4.7 \
     --hash=sha256:fbccdc05410c9ee21bbf16a35f4c1d16123dcdeb8a1d38f33654fa21d0234f79 \
     --hash=sha256:fea24543955a6a729c45a73fe90e08c743f0b3334bbf3201e6c4bc1b0c7fa464
     # via requests
+click==8.4.2 \
+    --hash=sha256:9a6cea6e60b17ebe0a44c5cc636d94f09bd66142c1cd7d8b4cd731c4917a15f6 \
+    --hash=sha256:e6f9f66136c816745b9d65817da91d61d957fb16e02e4dcd0552553c5a197b76
+    # via nltk
 cloudpickle==3.1.2 \
     --hash=sha256:7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414 \
     --hash=sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
@@ -367,6 +392,7 @@ colorama==0.4.6 ; sys_platform == 'win32' \
     --hash=sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44 \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
     # via
+    #   click
     #   colorlog
     #   tqdm
     #   typer
@@ -448,6 +474,30 @@ contourpy==1.3.3 \
     --hash=sha256:fd914713266421b7536de2bfa8181aa8c699432b6763a0ea64195ebe28bff6a9 \
     --hash=sha256:fde6c716d51c04b1c25d0b90364d0be954624a0ee9d60e23e850e8d48353d07a
     # via matplotlib
+ctranslate2==4.4.0 \
+    --hash=sha256:0658aa1cde18ddb30a1750561a65b3162669a4290ea90c560947cfea3a2dde34 \
+    --hash=sha256:093e1ba7ec32448caf4d644abe3b3a94869e45dd82a0dc9c248c58b0062dcb68 \
+    --hash=sha256:0df9658ea0d83c4701f9473bc0b6b53496aee85e40d78b2b5f9a4ecd613841e3 \
+    --hash=sha256:0e9043a7598bf3b4f95ed806b09dded28b55ddf0725de0729c41b6f6e546992c \
+    --hash=sha256:1656fca5ed866596aea49f045ad7aeb1438ba4d9a56477ae29844672692d5e78 \
+    --hash=sha256:1f794bcc7f44df77d1f6023b3653b634a0e28e32476721457cfea3d9bb7636b8 \
+    --hash=sha256:20dd98ccb48cc4a20d65a8ab0f79cbb92f95d3d92969874332f39d737b36b9ca \
+    --hash=sha256:31459db2d277d8f614d5188cb77a316fa2abf25f3dd92fea44a12390b3242cf5 \
+    --hash=sha256:3b39c69ecd2f3a71de37b0bcc911416d570c47e4456434a961846359df01b0ba \
+    --hash=sha256:4905149b61d515eb0b23a4784c83f17412491cbbfdb133b0bee5a9b738f18037 \
+    --hash=sha256:59501b66c7ad3a1ba808759494164216baae5ad8f7df2bf3fd236e4e5e19042e \
+    --hash=sha256:7556ee7fc924160953d71f64f4476977b1d880953d03322fac7957b5d3dab956 \
+    --hash=sha256:7653f1f22da29bbb0ba5704ac27b1a3fbde1f34b2b65a703dd20f7e2331eb03c \
+    --hash=sha256:8780bb5a86c25666c40c3713198f4223155a531fda73ac70bec2cde507f4ee86 \
+    --hash=sha256:87f2a2fb62998f5d6d137d09aeba1b3ade00d9337bf264db691c4fda8a74f67b \
+    --hash=sha256:90d70fee1a92469bcf34ac691debb5aacec99459e815150d1d20f620311c539c \
+    --hash=sha256:aea8067e0c5ea44fa3fb89a359c5be735bf7c626efaee129358d0964a625f212 \
+    --hash=sha256:c8fae40b58683fdeb8ed58c3c9edb1beb4e9510e6e79e0f12d2549f4aed63571 \
+    --hash=sha256:db48096fe721a68845f1afc2ffb3769dea4f9aff17c4aa4ae25afe090a6ad160 \
+    --hash=sha256:e094cdf18a6bb9156079f4568349a95cbf8a23fb4e6cff1b1edf92763a282e9d
+    # via
+    #   faster-whisper
+    #   whisperx
 cycler==0.12.1 \
     --hash=sha256:85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30 \
     --hash=sha256:88bb128f02ba341da8ef447245a9e138fae777f6a23943da4540077d3601eb1c
@@ -493,6 +543,10 @@ cython==3.2.5 \
     --hash=sha256:f4e722ceab6d795b4682d693656218671c873d4aa74119c54a2b62de0e7c48ce \
     --hash=sha256:f9b564f67b01bffa2521f475794b49f2787709cec1f91d5935a38eba37f2b359
     # via whisper-timestamped
+defusedxml==0.7.1 \
+    --hash=sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69 \
+    --hash=sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61
+    # via nltk
 docopt==0.6.2 \
     --hash=sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491
     # via
@@ -546,6 +600,9 @@ einops==0.8.2 \
     # via
     #   moshi
     #   pyannote-audio
+faster-whisper==1.2.1 \
+    --hash=sha256:79a66ad50688c0b794dd501dc340a736992a6342f7f95e5811be60b5224a26a7
+    # via whisperx
 feedparser==6.0.12 \
     --hash=sha256:64f76ce90ae3e8ef5d1ede0f8d3b50ce26bcce71dd8ae5e82b1cd2d4a5f94228 \
     --hash=sha256:6bbff10f5a52662c00a2e3f86a38928c37c48f77b3c511aedcd51de933549324
@@ -557,10 +614,14 @@ filelock==3.29.0 \
     #   huggingface-hub
     #   pyannote-pipeline
     #   torch
+    #   transformers
 fire==0.7.1 \
     --hash=sha256:3b208f05c736de98fb343310d090dcc4d8c78b2a89ea4f32b837c586270a9cbf \
     --hash=sha256:e43fd8a5033a9001e7e2973bab96070694b9f12f2e0ecf96d4683971b5ab1882
     # via finetune (pyproject.toml)
+flatbuffers==25.12.19 \
+    --hash=sha256:7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4
+    # via onnxruntime
 fonttools==4.63.0 \
     --hash=sha256:032038247a96c1690f9f31e377c389383c902531b085aa4e4dabd6f57f870e69 \
     --hash=sha256:063e08bd17bd5a90127a14123de0d6a952dbc847695fd98b63c043d58057f90c \
@@ -931,9 +992,12 @@ huggingface-hub==0.36.2 \
     --hash=sha256:48f0c8eac16145dfce371e9d2d7772854a4f591bcb56c9cf548accf531d54270
     # via
     #   finetune (pyproject.toml)
+    #   faster-whisper
     #   moshi
     #   pyannote-audio
     #   speechbrain
+    #   tokenizers
+    #   transformers
 hyperpyyaml==1.2.3 \
     --hash=sha256:0088c8ce97dc7c7d3460112b6ccc92dca46fade4d0320bc39f58b1fdda60f7f1 \
     --hash=sha256:4b135800ae13b846ae90aeb1c25e65e4d7a0138bd4935d3222734828d9f218f6
@@ -958,6 +1022,7 @@ joblib==1.5.3 \
     --hash=sha256:5fc3c5039fc5ca8c0276333a188bbd59d6b7ab37fe6632daa76bc7f9ec18e713 \
     --hash=sha256:8561a3269e6801106863fd0d6d84bb737be9e7631e33aaed3fb9ce5953688da3
     # via
+    #   nltk
     #   scikit-learn
     #   speechbrain
 julius==0.2.7 \
@@ -1453,6 +1518,10 @@ networkx==3.6.1 \
     --hash=sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509 \
     --hash=sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762
     # via torch
+nltk==3.10.3 \
+    --hash=sha256:bb9327a461c3811c2fa4900e03840401f2126adfb30c0072827c433bd2444ea4 \
+    --hash=sha256:ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c
+    # via whisperx
 numba==0.65.1 \
     --hash=sha256:1735c15c1134a5108b4d6a5c77fc0947924ea066a738dc09a52008c13df9cad3 \
     --hash=sha256:19357146c32fe9ed25059ab915e8465fb13951cf6b0aace3826b76886373ab23 \
@@ -1542,10 +1611,12 @@ numpy==2.2.6 \
     #   asteroid-filterbanks
     #   bitsandbytes
     #   contourpy
+    #   ctranslate2
     #   dtw-python
     #   matplotlib
     #   moshi
     #   numba
+    #   onnxruntime
     #   openai-whisper
     #   optuna
     #   pandas
@@ -1559,6 +1630,8 @@ numpy==2.2.6 \
     #   tensorboard
     #   tensorboardx
     #   torchmetrics
+    #   transformers
+    #   whisperx
 nvidia-cublas-cu12==12.4.5.8 ; platform_machine == 'x86_64' and sys_platform == 'linux' \
     --hash=sha256:0f8aa1706812e00b9f19dfe0cdb3999b092ccb8ca168c0db5b8ea712456fd9b3 \
     --hash=sha256:2fc8da60df463fdefa81e323eef2e36489e1c94335b5358bcb38360adf75ac9b \
@@ -1634,6 +1707,34 @@ omegaconf==2.3.0 \
     --hash=sha256:7b4df175cdb08ba400f45cae3bdcae7ba8365db4d165fc65fd04b050ab63b46b \
     --hash=sha256:d5d4b6d29955cc50ad50c46dc269bcd92c6e00f5f90d23ab5fee7bfca4ba4cc7
     # via pyannote-audio
+onnxruntime==1.28.0 \
+    --hash=sha256:07fb3cbe990d6bf0ab3c22bfbbfb0e314151266046ea6edb4a07f556b4258c5f \
+    --hash=sha256:0a83bdb70d143cede762b677789bf2a7acca54b3fb82565601d5c30695aa933c \
+    --hash=sha256:0d650aeee29368414367b65529e90afe4bf1bab76254789063b8b2f7ea3013c8 \
+    --hash=sha256:0faf85fb447a663c9cdadc39bd6b19bdf7bedded6699e45731b9b36c46fd993d \
+    --hash=sha256:1a1a19175464665c9b8d50bc916f216cc0b569110045b7bbca8f9f290b186f58 \
+    --hash=sha256:26ff0fdd06efb6c155bae95387a09db1a2be89c7a03e4d0bffd5a171cc2826da \
+    --hash=sha256:31410f544674f534c2f27348af52ef81682ca9c8719154bf4d48f0ef23823b1e \
+    --hash=sha256:4e81a23df16e7acb9d51b06d30cc098e49315ef9180f97bc2221d167b4b04d9c \
+    --hash=sha256:4f6e92367ddce1e4d33cf295024f40192be6c6171a09208f515ba169ced06c8e \
+    --hash=sha256:54fa221d669282bd8f582708ce4c96010a7e9fb0661f9006b37fe2fedafb73fe \
+    --hash=sha256:6afdc83f1317c136e92fc29f5ee9f058de59d87c0b22cee3fdbfbaa0ccc2098a \
+    --hash=sha256:8adff67a3f28257b37cfe945a7e952e4122666aa8c91a0380862e9fd4c2ed19f \
+    --hash=sha256:8d66f9ceb29909c70839e4e4fb3435c7b490050d8f162bd5f3aba4ca01ee517f \
+    --hash=sha256:a166b78ee04f3a37fa1ef82034b6a3ce96d9684e582d4d30b296de83e9998bb5 \
+    --hash=sha256:ac301f53b1930402fc46c368e268acfed02f3207272aaff05070d7e09f96f031 \
+    --hash=sha256:bc2565e487b4896fb988d6383577d875d958e071fc5f6c3550bd5d02ae98264b \
+    --hash=sha256:c35064f9b3c43c81c5d5d282091401d0f1ff22796d93ccade4ea2ece5e137ab8 \
+    --hash=sha256:cfab507abe09d6ffeb817eee07944d452fdc0b00fdcef34cab4db10a45e378c7 \
+    --hash=sha256:e02feeb0165c5f13b4cc954738078d59b90128516ac12b671ee24a530242bf02 \
+    --hash=sha256:e562d6e36a749f6764481c0ddb0f2af3d0b5a3c164291361d08803c557f369af \
+    --hash=sha256:f2a3b9e30ce880d4ca54999cb313569e36da4f62eefe25f87be18f43e9a3a4d5 \
+    --hash=sha256:f5c5daabd28aad610f83fdcf32acec8fb57e6adc6c6a39fe2a3c755db957b410 \
+    --hash=sha256:f649dd6f6452d12a8059888aa489fe519e062e18793dac72b9efa0f9fdb64135 \
+    --hash=sha256:f7f022a1103cae591c75fc4565589a515f2ddd14a6ac8e8a05812dfeda142e28
+    # via
+    #   faster-whisper
+    #   whisperx
 openai-whisper==20250625 \
     --hash=sha256:37a91a3921809d9f44748ffc73c0a55c9f366c85a3ef5c2ae0cc09540432eb96
     # via whisper-timestamped
@@ -1650,6 +1751,7 @@ packaging==26.2 \
     #   lightning
     #   lightning-utilities
     #   matplotlib
+    #   onnxruntime
     #   optuna
     #   pytorch-lightning
     #   speechbrain
@@ -1657,6 +1759,7 @@ packaging==26.2 \
     #   tensorboardx
     #   torch-pitch-shift
     #   torchmetrics
+    #   transformers
 pandas==2.3.3 ; python_full_version >= '3.14' \
     --hash=sha256:0242fe9a49aa8b4d78a4fa03acb397a58833ef6199e9aa40a95f027bb3a1b6e7 \
     --hash=sha256:1611aedd912e1ff81ff41c745822980c49ce4a7907537be8692c8dbc31924593 \
@@ -1716,6 +1819,7 @@ pandas==2.3.3 ; python_full_version >= '3.14' \
     # via
     #   pyannote-database
     #   pyannote-metrics
+    #   whisperx
 pandas==3.0.3 ; python_full_version < '3.14' \
     --hash=sha256:0383c72c75cdcca61a9e116e611143902dbfd08bff356829c2f6d1cf40a9ca8c \
     --hash=sha256:05f1f1752b8533ea03f7f39a9c15b1a058d067bb48f4748948e7a8691e0510f2 \
@@ -1768,6 +1872,7 @@ pandas==3.0.3 ; python_full_version < '3.14' \
     # via
     #   pyannote-database
     #   pyannote-metrics
+    #   whisperx
 pillow==12.2.0 \
     --hash=sha256:00a2865911330191c0b818c59103b58a5e697cae67042366970a6b6f1b20b7f9 \
     --hash=sha256:01afa7cf67f74f09523699b4e88c73fb55c13346d212a59a2db1f86b0a63e8c5 \
@@ -2002,12 +2107,15 @@ protobuf==7.35.0 \
     --hash=sha256:f05bcadf9a2a6b8dda047007075135fb7d08c73d9177aabc067e1be46881a201 \
     --hash=sha256:fcbe42a4ac09d3ec9c987ddfcd956afd0b15f1ff613bd8371bde9405ffd5c8e5
     # via
+    #   onnxruntime
     #   tensorboard
     #   tensorboardx
 pyannote-audio==3.4.0 \
     --hash=sha256:36e38f058059f46da3478dda581cda53d9d85a21173a3e70bbdbc3ba93b5e1b7 \
     --hash=sha256:d523d883cb8d37cb6daf99f3ba83f9138bb193646ad71e6eae7deb89d8ddd642
-    # via finetune (pyproject.toml)
+    # via
+    #   finetune (pyproject.toml)
+    #   whisperx
 pyannote-core==5.0.0 \
     --hash=sha256:04920a6754492242ce0dc6017545595ab643870fe69a994f20c1a5f2da0544d0 \
     --hash=sha256:1a55bcc8bd680ba6be5fa53efa3b6f3d2cdd67144c07b6b4d8d66d5cb0d2096f
@@ -2138,6 +2246,7 @@ pyyaml==6.0.3 \
     --hash=sha256:fc09d0aa354569bc501d4e787133afc08552722d3ab34836a80547331bb5d4a0
     # via
     #   finetune (pyproject.toml)
+    #   ctranslate2
     #   huggingface-hub
     #   hyperpyyaml
     #   lightning
@@ -2146,6 +2255,7 @@ pyyaml==6.0.3 \
     #   pyannote-database
     #   pyannote-pipeline
     #   pytorch-lightning
+    #   transformers
 regex==2026.5.9 \
     --hash=sha256:002205cafd2a9e78c6290c7d1df277bf3277b3b7a30e0b4bb0dac2e2e3f7cb2d \
     --hash=sha256:01f0f5f55f4b64dacec85dc116d3c05fd23ad3ff037bbc73a2085775953c2611 \
@@ -2261,7 +2371,10 @@ regex==2026.5.9 \
     --hash=sha256:fd03c4f0e33280d15cae17159b899245d6b7c53d21def19b263b39655061f5ce \
     --hash=sha256:fd190e88a895a8901325fad284a3f74ea52b1da8525b76cc811fa9b1edf0ce2b \
     --hash=sha256:ff8d372ac2acdc048d1c19916f27ee61bc5722728458ba6ca5052f2c72d51763
-    # via tiktoken
+    # via
+    #   nltk
+    #   tiktoken
+    #   transformers
 requests==2.34.2 \
     --hash=sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0 \
     --hash=sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed
@@ -2270,6 +2383,7 @@ requests==2.34.2 \
     #   huggingface-hub
     #   speechbrain
     #   tiktoken
+    #   transformers
 rich==15.0.0 \
     --hash=sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb \
     --hash=sha256:edd07a4824c6b40189fb7ac9bc4c52536e9780fbbfbddf6f1e2502c31b068c36
@@ -2374,6 +2488,7 @@ safetensors==0.7.0 \
     # via
     #   finetune (pyproject.toml)
     #   moshi
+    #   transformers
 scikit-learn==1.8.0 \
     --hash=sha256:00d6f1d66fbcf4eba6e356e1420d33cc06c70a45bb1363cd6f6a8e4ebbbdece2 \
     --hash=sha256:0d6ae97234d5d7079dc0040990a6f7aeb97cb7fa7e8945f1999a429b23569e0a \
@@ -2561,6 +2676,7 @@ setuptools==82.0.1 \
     --hash=sha256:7d872682c5d01cfde07da7bccc7b65469d3dca203318515ada1de5eda35efbf9 \
     --hash=sha256:a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb
     # via
+    #   ctranslate2
     #   tensorboard
     #   torch
 sgmllib3k==1.0.0 \
@@ -2599,6 +2715,7 @@ soundfile==0.13.1 \
     --hash=sha256:b2c68dab1e30297317080a5b43df57e302584c49e2942defdde0acccc53f0e5b \
     --hash=sha256:c734564fab7c5ddf8e9be5bf70bab68042cd17e9c214c06e365e20d64f9a69d5
     # via
+    #   finetune (pyproject.toml)
     #   pyannote-audio
     #   speechbrain
 speechbrain==1.1.0 \
@@ -2780,6 +2897,34 @@ tiktoken==0.13.0 \
     --hash=sha256:ed5a30027cb4d8c7ca8b273d4766f3db3cf58fad9e9f3b1a68a351ffb54873d5 \
     --hash=sha256:fc1c44cd37b43fc46bae593129164f4f281e82ea116b57a85aa81bda57eafc94
     # via openai-whisper
+tokenizers==0.22.2 \
+    --hash=sha256:143b999bdc46d10febb15cbffb4207ddd1f410e2c755857b5a0797961bbdc113 \
+    --hash=sha256:1a62ba2c5faa2dd175aaeed7b15abf18d20266189fb3406c5d0550dd34dd5f37 \
+    --hash=sha256:1c774b1276f71e1ef716e5486f21e76333464f47bece56bbd554485982a9e03e \
+    --hash=sha256:1e418a55456beedca4621dbab65a318981467a2b188e982a23e117f115ce5001 \
+    --hash=sha256:1e50f8554d504f617d9e9d6e4c2c2884a12b388a97c5c77f0bc6cf4cd032feee \
+    --hash=sha256:2249487018adec45d6e3554c71d46eb39fa8ea67156c640f7513eb26f318cec7 \
+    --hash=sha256:25b85325d0815e86e0bac263506dd114578953b7b53d7de09a6485e4a160a7dd \
+    --hash=sha256:29c30b83d8dcd061078b05ae0cb94d3c710555fbb44861139f9f83dcca3dc3e4 \
+    --hash=sha256:319f659ee992222f04e58f84cbf407cfa66a65fe3a8de44e8ad2bc53e7d99012 \
+    --hash=sha256:369cc9fc8cc10cb24143873a0d95438bb8ee257bb80c71989e3ee290e8d72c67 \
+    --hash=sha256:37ae80a28c1d3265bb1f22464c856bd23c02a05bb211e56d0c5301a435be6c1a \
+    --hash=sha256:38337540fbbddff8e999d59970f3c6f35a82de10053206a7562f1ea02d046fa5 \
+    --hash=sha256:473b83b915e547aa366d1eee11806deaf419e17be16310ac0a14077f1e28f917 \
+    --hash=sha256:544dd704ae7238755d790de45ba8da072e9af3eea688f698b137915ae959281c \
+    --hash=sha256:64d94e84f6660764e64e7e0b22baa72f6cd942279fdbb21d46abd70d179f0195 \
+    --hash=sha256:753d47ebd4542742ef9261d9da92cd545b2cacbb48349a1225466745bb866ec4 \
+    --hash=sha256:791135ee325f2336f498590eb2f11dc5c295232f288e75c99a36c5dbce63088a \
+    --hash=sha256:9ce725d22864a1e965217204946f830c37876eee3b2ba6fc6255e8e903d5fcbc \
+    --hash=sha256:a6bf3f88c554a2b653af81f3204491c818ae2ac6fbc09e76ef4773351292bc92 \
+    --hash=sha256:bfb88f22a209ff7b40a576d5324bf8286b519d7358663db21d6246fb17eea2d5 \
+    --hash=sha256:c9ea31edff2968b44a88f97d784c2f16dc0729b8b143ed004699ebca91f05c48 \
+    --hash=sha256:df6c4265b289083bf710dff49bc51ef252f9d5be33a45ee2bed151114a56207b \
+    --hash=sha256:e10bf9113d209be7cd046d40fbabbaf3278ff6d18eb4da4c500443185dc1896c \
+    --hash=sha256:f01a9c019878532f98927d2bacb79bbb404b43d3437455522a00a30718cdedb5
+    # via
+    #   faster-whisper
+    #   transformers
 torch==2.6.0 \
     --hash=sha256:09e06f9949e1a0518c5b09fe95295bc9661f219d9ecb6f9893e5123e10696628 \
     --hash=sha256:265f70de5fd45b864d924b64be1797f86e76c8e48a02c2a3a6fc7ec247d2226c \
@@ -2817,6 +2962,7 @@ torch==2.6.0 \
     #   torch-pitch-shift
     #   torchaudio
     #   torchmetrics
+    #   whisperx
 torch-audiomentations==0.12.0 \
     --hash=sha256:1b80b91d2016ccf83979622cac8f702072a79b7dcc4c2bee40f00b26433a786b \
     --hash=sha256:b02d4c5eb86376986a53eb405cca5e34f370ea9284411237508e720c529f7888
@@ -2852,6 +2998,7 @@ torchaudio==2.6.0 \
     #   speechbrain
     #   torch-audiomentations
     #   torch-pitch-shift
+    #   whisperx
 torchmetrics==1.9.0 \
     --hash=sha256:a488609948600df52d3db4fcdab02e62aab2a85ef34da67037dc3e65b8512faa \
     --hash=sha256:bfdcbff3dd1d96b3374bb2496eb39f23c4b28b8a845b6a18c313688e0d2d9ca1
@@ -2864,15 +3011,22 @@ tqdm==4.67.3 \
     --hash=sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf
     # via
     #   finetune (pyproject.toml)
+    #   faster-whisper
     #   huggingface-hub
     #   lightning
     #   moshi
+    #   nltk
     #   openai-whisper
     #   optuna
     #   pyannote-pipeline
     #   pytorch-lightning
     #   pytorch-metric-learning
     #   speechbrain
+    #   transformers
+transformers==4.57.6 \
+    --hash=sha256:4c9e9de11333ddfe5114bc872c9f370509198acf0b87a832a0ab9458e2bd0550 \
+    --hash=sha256:55e44126ece9dc0a291521b7e5492b572e6ef2766338a610b9ab5afbb70689d3
+    # via whisperx
 triton==3.2.0 ; sys_platform == 'linux' or sys_platform == 'linux2' \
     --hash=sha256:30ceed0eff2c4a73b14eb63e052992f44bbdf175f3fad21e1ac8097a772de7ee \
     --hash=sha256:8009a1fb093ee8546495e96731336a33fb8856a38e45bb4ab6affd6dbc3ba220 \
@@ -2921,6 +3075,10 @@ werkzeug==3.1.8 \
 whisper-timestamped==1.15.9 \
     --hash=sha256:7582e0cc45dfda78af3a35874485145c20cecb8cc4bfc4599ebb5eeb9fd2ffc2 \
     --hash=sha256:f3609d446ead6d8e0fc82021311b087efd8ef63b7fa255fa1b3a58a32b760a1e
+    # via finetune (pyproject.toml)
+whisperx==3.4.5 \
+    --hash=sha256:49f811377f5747e90c5330436005c2f28f37573e9a1ab68081edd203257223e6 \
+    --hash=sha256:f67abdf116d770f755841d69a4b4d83ebc0ad157433eb5b95e1a80cbc16acb03
     # via finetune (pyproject.toml)
 yarl==1.24.2 \
     --hash=sha256:0063adad533e57171b79db3943b229d40dfafeeee579767f96541f106bac5f1b \
