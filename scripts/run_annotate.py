@@ -17,7 +17,7 @@ from s3 import S3Store
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-ANNOTATE = REPO_ROOT / "annotate.py"
+ANNOTATE = REPO_ROOT / "scripts" / "annotate_whisperx.py"
 
 # Two separate flags on purpose. `_stop` means a signal arrived, and only that:
 # it decides whether the workers' non-zero exits are failures and whether the
@@ -35,9 +35,9 @@ def _request_stop(signum: int, frame: FrameType | None) -> None:
     _stop.set()
     _finished.set()
     logger.warning("signal %d received, stopping workers and shipping what is done", signum)
-    # annotate.py has no signal handling of its own, so it dies mid-episode and
-    # leaves a `.json.tmp.<pid>` behind. That name does not match the `*.json`
-    # glob, so nothing half-written is ever uploaded or counted as done.
+    # The annotator has no signal handling of its own, so it dies mid-episode
+    # and leaves a `.json.tmp-<pid>` behind. That name does not match the
+    # `*.json` glob, so nothing half-written is ever uploaded or counted as done.
     for process in _processes:
         process.terminate()
 
@@ -116,16 +116,30 @@ def main() -> int:
     parser.add_argument(
         "--workers",
         type=int,
-        default=3,
-        help="Concurrent annotate.py processes. Bound by RAM, not cores: each "
-        "one reads a whole episode into memory (default: %(default)s).",
+        default=2,
+        help="Concurrent annotator processes. faster-whisper batches internally, "
+        "so it saturates the GPU with fewer processes than a beam-search loop "
+        "would; each one still reads a whole episode into memory "
+        "(default: %(default)s).",
     )
     parser.add_argument("--lang", default="es")
     parser.add_argument(
         "--whisper-model",
-        default="medium",
-        help="Passed straight to annotate.py, which recommends medium for "
-        "stereo with VAD (default: %(default)s).",
+        default="large-v3",
+        help="ASR model. It decides the words; the aligner decides their "
+        "timing (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--align-model",
+        default=None,
+        help="wav2vec2 CTC checkpoint used for forced alignment. Defaults to "
+        "the Spanish one chosen in annotate_whisperx.py.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=None,
+        help="Transcription batch size, passed through to the annotator.",
     )
     parser.add_argument("--s3-bucket", default=None, help="Omit to stay local.")
     parser.add_argument("--s3-prefix", default="corpus")
@@ -222,12 +236,15 @@ def main() -> int:
             sys.executable,
             str(ANNOTATE),
             str(egs),
-            "--local",
             "--lang",
             args.lang,
-            "--whisper_model",
+            "--whisper-model",
             args.whisper_model,
         ]
+        if args.align_model:
+            command += ["--align-model", args.align_model]
+        if args.batch_size:
+            command += ["--batch-size", str(args.batch_size)]
         logger.info("shard %d: %s", shard, " ".join(command))
         _processes.append(subprocess.Popen(command, cwd=REPO_ROOT))
 
