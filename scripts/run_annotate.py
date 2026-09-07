@@ -124,10 +124,21 @@ def main() -> int:
     )
     parser.add_argument("--lang", default="es")
     parser.add_argument(
-        "--whisper-model",
-        default="large-v3",
-        help="ASR model. It decides the words; the aligner decides their "
-        "timing (default: %(default)s).",
+        "--backend",
+        default="whisperx",
+        help="Which ASR decides the words (default: %(default)s).",
+    )
+    parser.add_argument(
+        "--align",
+        default=None,
+        choices=["ctc", "native"],
+        help="Where the word timestamps come from. Defaults to the annotator's "
+        "choice for the backend.",
+    )
+    parser.add_argument(
+        "--asr-model",
+        default=None,
+        help="Defaults to the usual model for the chosen backend.",
     )
     parser.add_argument(
         "--align-model",
@@ -141,6 +152,7 @@ def main() -> int:
         default=None,
         help="Transcription batch size, passed through to the annotator.",
     )
+    parser.add_argument("--device", default=None, help="Passed through to the annotator.")
     parser.add_argument("--s3-bucket", default=None, help="Omit to stay local.")
     parser.add_argument("--s3-prefix", default="corpus")
     parser.add_argument(
@@ -238,13 +250,18 @@ def main() -> int:
             str(egs),
             "--lang",
             args.lang,
-            "--whisper-model",
-            args.whisper_model,
+            "--backend",
+            args.backend,
         ]
-        if args.align_model:
-            command += ["--align-model", args.align_model]
-        if args.batch_size:
-            command += ["--batch-size", str(args.batch_size)]
+        for flag, value in (
+            ("--asr-model", args.asr_model),
+            ("--align", args.align),
+            ("--align-model", args.align_model),
+            ("--batch-size", args.batch_size),
+            ("--device", args.device),
+        ):
+            if value is not None:
+                command += [flag, str(value)]
         logger.info("shard %d: %s", shard, " ".join(command))
         _processes.append(subprocess.Popen(command, cwd=REPO_ROOT))
 
