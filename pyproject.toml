@@ -52,6 +52,36 @@ dev = [
   "pytest",
 ]
 
+# Dependencies for the annotation stages, resolved independently of the trainer.
+#
+# A dependency-group and not an extra, even though `dev` above is an extra on
+# purpose: an extra always carries the project's own dependencies with it, and
+# torch==2.6 is exactly what this set has to escape. `uv pip compile --group`
+# resolves the group on its own, so whisperx is free to bring torch 2.8.
+#
+# Why it has to escape: torch==2.6 caps whisperx below 3.5, which caps
+# ctranslate2 below 4.5 -- and that build cannot run on a current GPU AMI. Its
+# wheel asks for an executable stack, which recent kernels refuse, and it links
+# cuDNN 8 while torch ships cuDNN 9.
+#
+# The annotation scripts never import the trainer, only these plus boto3.
+#
+# Compiled with:
+#   uv pip compile --generate-hashes --universal \
+#     --group pyproject.toml:annotate -o requirements-annotate.txt
+[dependency-groups]
+annotate = [
+  # Pinned to the stable release: a bare >= picked up a release candidate.
+  "whisperx==3.8.6",
+  "whisper_timestamped",
+  # Held on the 4.x line. whisperx only asks for >=4.48, and the crisper backend
+  # drives transformers' own `pipeline`, which is where a major bump would bite.
+  "transformers>=4.48,<5",
+  "sphn>=0.2.0,<0.3.0",
+  "boto3",
+  "numpy",
+]
+
 [tool.uv]
 # The following fixes Pylance/VSCode not seeing the `finetune` package. See
 # https://github.com/astral-sh/uv/issues/3898
