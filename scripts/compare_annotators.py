@@ -126,6 +126,9 @@ def main() -> int:
                     "episode": episode,
                     **metrics,
                     "speech_seconds": round(float(speech), 1),
+                    "lexical_diversity": round(
+                        metrics["unique_words"] / max(metrics["words"], 1), 3
+                    ),
                     "words_per_min": round(metrics["words"] / minutes, 1),
                     "fillers_per_min": round(metrics["fillers"] / minutes, 2),
                     "words_on_silence": misplaced,
@@ -142,7 +145,18 @@ def main() -> int:
         writer.writerows(rows)
     logger.info("Written to %s", args.out)
 
-    header = f"{'config':<22}{'words':>7}{'w/min':>8}{'fillers':>9}{'f/min':>7}{'repeats':>9}{'on_silence':>12}{'score':>8}"
+    # The uniq/w column is the WORST episode ratio of distinct words to
+    # total, not the average across episodes. A transcriber that degenerates
+    # does it on one hard episode, not evenly over the set, so an average
+    # hides exactly what this column exists to catch.
+    #
+    # From the 2026-09-09 run: one config looped a single six-word phrase 352
+    # times through one episode, and immediate_repeats missed it entirely --
+    # that counter only sees a word repeated back to back. Its ratio on that
+    # episode was 0.11 against 0.28 for every other config, but averaged over
+    # three episodes it came out 0.23 against 0.32, which reads as ordinary
+    # variation. Below roughly 0.2 the output is degenerate.
+    header = f"{'config':<22}{'words':>7}{'w/min':>8}{'fillers':>9}{'f/min':>7}{'repeats':>9}{'uniq/w':>8}{'on_silence':>12}{'score':>8}"
     logger.info(header)
     logger.info("-" * len(header))
     for name in runs:
@@ -158,6 +172,7 @@ def main() -> int:
             "%s",
             f"{name:<22}{total:>7}{total/max(minutes,1e-9):>8.0f}{fillers:>9}"
             f"{fillers/max(minutes,1e-9):>7.2f}{sum(r['immediate_repeats'] for r in mine):>9}"
+            f"{min(r['lexical_diversity'] for r in mine):>8.2f}"
             f"{silent:>7} ({100*silent/max(total,1):>3.0f}%)"
             f"{statistics.fmean(scores) if scores else float('nan'):>8.2f}",
         )
