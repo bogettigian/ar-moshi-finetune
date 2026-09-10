@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import logging.config
 import os
@@ -223,12 +224,69 @@ def speaker_changes_per_min(segments: list[Segment]) -> float:
     return changes / span_min if span_min > 0 else 0.0
 
 
-def count_dominant_speakers(segments: list[Segment], min_share: float = 0.1) -> int:
-    speaker_time: dict[str, float] = defaultdict(float)
-    total_time = 0.0
+def speaker_durations(segments: list[Segment]) -> dict[str, float]:
+    totals: dict[str, float] = defaultdict(float)
     for seg in segments:
-        speaker_time[seg.speaker] += seg.duration
-        total_time += seg.duration
+        totals[seg.speaker] += seg.duration
+    return dict(totals)
+
+
+def top_two_speakers(segments: list[Segment]) -> tuple[str, str]:
+    ranked = sorted(speaker_durations(segments).items(), key=lambda kv: kv[1], reverse=True)
+    if len(ranked) < 2:
+        raise ValueError(f"need at least 2 speakers, got {len(ranked)}")
+    return ranked[0][0], ranked[1][0]
+
+
+def count_dominant_speakers(segments: list[Segment], min_share: float = 0.1) -> int:
+    totals = speaker_durations(segments)
+    total_time = sum(totals.values())
     if total_time == 0:
         return 0
-    return sum(1 for t in speaker_time.values() if t / total_time >= min_share)
+    return sum(1 for t in totals.values() if t / total_time >= min_share)
+
+
+def assign_channels(mp3_name: str, speakers: tuple[str, str]) -> dict[str, int]:
+    digest = hashlib.md5(mp3_name.encode()).digest()[0]
+    if digest % 2 == 0:
+        return {speakers[0]: 0, speakers[1]: 1}
+    return {speakers[1]: 0, speakers[0]: 1}
+
+
+def merge_intervals(
+    intervals: list[tuple[float, float]], min_gap: float = 0.0
+) -> list[tuple[float, float]]:
+    merged: list[tuple[float, float]] = []
+    for start, end in sorted(intervals):
+        if merged and (start <= merged[-1][1] or start - merged[-1][1] < min_gap):
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def drop_short(
+    intervals: list[tuple[float, float]], min_duration: float
+) -> list[tuple[float, float]]:
+    return [(s, e) for s, e in intervals if e - s >= min_duration]
+
+
+def union_duration(intervals: list[tuple[float, float]]) -> float:
+    return sum(e - s for s, e in merge_intervals(intervals))
+
+
+def intersect_duration(
+    left: list[tuple[float, float]], right: list[tuple[float, float]]
+) -> float:
+    a, b = merge_intervals(left), merge_intervals(right)
+    total = 0.0
+    i = j = 0
+    while i < len(a) and j < len(b):
+        lo, hi = max(a[i][0], b[j][0]), min(a[i][1], b[j][1])
+        if hi > lo:
+            total += hi - lo
+        if a[i][1] < b[j][1]:
+            i += 1
+        else:
+            j += 1
+    return total

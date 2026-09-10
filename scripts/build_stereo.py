@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import logging
-from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -17,29 +15,14 @@ from common import (
     parse_rttm,
     setup_logging,
     silence_audio_backend_warnings,
+    assign_channels,
     sweep_temp_files,
+    top_two_speakers as pick_top_two_speakers,
 )
 
 logger = logging.getLogger(__name__)
 
 BLOCK_SEC = 60
-
-
-def pick_top_two_speakers(segments: list[Segment]) -> tuple[str, str]:
-    speaker_time: dict[str, float] = defaultdict(float)
-    for seg in segments:
-        speaker_time[seg.speaker] += seg.duration
-    ranked = sorted(speaker_time.items(), key=lambda kv: kv[1], reverse=True)
-    if len(ranked) < 2:
-        raise ValueError(f"need ≥2 speakers, got {len(ranked)}")
-    return ranked[0][0], ranked[1][0]
-
-
-def assign_channels(mp3_name: str, speakers: tuple[str, str]) -> dict[str, int]:
-    digest = hashlib.md5(mp3_name.encode()).digest()[0]
-    if digest % 2 == 0:
-        return {speakers[0]: 0, speakers[1]: 1}
-    return {speakers[1]: 0, speakers[0]: 1}
 
 
 def speaker_ranges(
