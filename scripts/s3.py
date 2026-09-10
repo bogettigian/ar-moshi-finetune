@@ -40,6 +40,14 @@ class S3Store:
         local.parent.mkdir(parents=True, exist_ok=True)
         self._client.download_file(self.bucket, self._key(key), str(local))
 
+    def download_range(self, key: str, start: int, end: int) -> bytes:
+        if not self._client:
+            raise RuntimeError("download_range needs a bucket")
+        response = self._client.get_object(
+            Bucket=self.bucket, Key=self._key(key), Range=f"bytes={start}-{end}"
+        )
+        return response["Body"].read()
+
     def list_keys(self, subprefix: str = "") -> set[str]:
         if not self._client:
             return set()
