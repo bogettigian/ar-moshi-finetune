@@ -29,7 +29,7 @@ text_padding_weight: .5
 
 duration_sec: 100
 batch_size: 16
-max_steps: 1000
+max_steps: 440  # 1.27 epochs
 gradient_checkpointing: true
 optim:
   lr: 2e-6
